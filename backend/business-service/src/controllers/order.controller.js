@@ -7,6 +7,7 @@ import {
   myOrdersQuerySchema,
   adminOrdersQuerySchema,
   updateOrderStatusSchema,
+  updatePaymentStatusSchema,
 } from "../validators/order.validator.js";
 
 export const checkout = async (req, res) => {
@@ -95,5 +96,24 @@ export const updateStatus = async (req, res) => {
     return sendSuccess(res, data, "Cập nhật trạng thái đơn hàng thành công!");
   } catch (error) {
     return sendAppError(res, error, "Cập nhật trạng thái đơn hàng thất bại!");
+  }
+};
+
+export const updatePaymentStatus = async (req, res) => {
+  const params = validateInput(orderIdParamSchema, req.params);
+  if (!params.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", params.errors, 400);
+  }
+
+  const validation = validateInput(updatePaymentStatusSchema, req.body);
+  if (!validation.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", validation.errors, 400);
+  }
+
+  try {
+    const data = await orderService.updatePaymentStatusByAdmin(params.data.id, validation.data.paymentStatus);
+    return sendSuccess(res, data, "Cập nhật thanh toán thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Cập nhật thanh toán thất bại!");
   }
 };

@@ -64,13 +64,13 @@ backend/
         ml.client.js             HTTP client nội bộ tới ML (timeout + trả null)
       config/env.js              Đọc process.env
       controllers/               Nhận req → validate → gọi service → trả res
-      middlewares/auth.middleware.js
+      middlewares/               auth.middleware.js, upload.middleware.js (multer)
       routes/                    Khai báo method + path
       services/                  Nghiệp vụ + Prisma (không dùng req/res)
         brand.service.js           CRUD thương hiệu (bảng brands)
         recommendation.service.js  Similar / bundles / for-you / featured + fallback
         smartSearch.service.js     Parse của ML → where Prisma
-      utils/                     response.js, AppError.js, money.js, constants.js
+      utils/                     response.js, AppError.js, money.js, constants.js, mailer.js
       validators/                Zod schema
       app.js                     Cấu hình Express
     server.js                    app.listen
@@ -182,6 +182,11 @@ Các model hiện có sẵn:
 | `ML_TIMEOUT_MS` | `1200` | Timeout gọi ML (ngắn để không chậm API) |
 | `ML_INTERNAL_TOKEN` | rỗng | Gửi kèm `X-Internal-Token`; phải trùng ML |
 | `SEED_ADMIN_*` | — | Tài khoản admin do seed tạo |
+| `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM` | rỗng | Gửi mail reset/verify; thiếu `SMTP_HOST` → mail in ra console |
+| `APP_URL` | `http://localhost:3000` | Frontend nhận link reset/verify |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | rỗng | Upload ảnh; thiếu → `/api/admin/uploads` trả 503 |
+| `SUPABASE_STORAGE_BUCKET` | `product-images` | Bucket public chứa ảnh sản phẩm |
+| `BANK_NAME/ACCOUNT/HOLDER` | rỗng | Thông tin chuyển khoản cho `/api/payment-info` |
 
 ### 4.2. `backend/ml-service/.env`
 
@@ -221,6 +226,54 @@ Dữ liệu sản phẩm dùng thương hiệu chuẩn hoá: `products.brand_id`
 Response trả `brandId` + `brand: { id, name }`; body tạo/sửa sản phẩm dùng `brandId`
 (không còn `brand` free-text, bảng chi tiết không lưu thương hiệu). Quản lý thương hiệu qua
 `/api/brands` (GET công khai, POST/PUT/DELETE yêu cầu admin).
+
+Đánh giá sản phẩm (khách chấm sao, không cần mua hàng):
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/products/:id/rating` | — | `{ rating, ratingCount }` đọc từ cột cache |
+| POST | `/api/products/:id/rating` | Đăng nhập | `{ score }` nguyên 1–5; upsert phiếu → `{ rating, ratingCount, myScore }` |
+| DELETE | `/api/products/:id/rating` | Đăng nhập | Rút phiếu của mình → `{ rating, ratingCount, myScore: null }` |
+
+`Product.rating` là trung bình cache tự tính từ bảng `ratings` (unique `user_id + product_id`,
+CHECK score 1–5); admin không còn nhận `rating` trong POST/PUT products. ML vẫn chỉ đọc
+`p.rating` như cũ. Mọi thao tác ghi khoá dòng product (`FOR UPDATE`) trong transaction trước
+khi aggregate + update cache. Rating seed hiển thị tới phiếu thật đầu tiên; hết phiếu về 0.
+
+Review (chỉ người đã mua — có đơn không huỷ chứa sản phẩm):
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/products/:id/reviews` | — | Phân trang, kèm `username` + `score` từ bảng ratings |
+| POST | `/api/products/:id/reviews` | Đăng nhập | `{ score, content }` — upsert review **và** phiếu sao trong cùng transaction |
+| DELETE | `/api/products/:id/reviews` | Đăng nhập | Xoá chữ, giữ phiếu sao |
+
+Tài khoản & thanh toán:
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| PUT | `/api/auth/me` | Đăng nhập | Sửa `email`/`address`; đổi email → phải xác thực lại |
+| PUT | `/api/auth/password` | Đăng nhập | `{ currentPassword, newPassword }` |
+| POST | `/api/auth/forgot-password` · `/reset-password` | — | Mã reset 15 phút gửi qua mail (console nếu chưa SMTP) |
+| POST | `/api/auth/verify-email` | — | Token 24 giờ; `/resend-verification` cần đăng nhập |
+| GET | `/api/payment-info` | — | `{ methods, bank }` từ env |
+| PATCH | `/api/admin/orders/:id/payment` | Admin | `{ paymentStatus }` — xác nhận chuyển khoản, optimistic claim |
+
+Checkout nhận thêm `paymentMethod` (`cod` mặc định | `bank_transfer`); đơn lưu `paymentStatus`
+(`unpaid`/`paid`). Token reset/verify chỉ lưu hash SHA-256 trong DB. `authenticate` đọc lại user
+mỗi request nên khoá tài khoản có hiệu lực ngay cả với token cũ.
+
+Quản trị mở rộng:
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/admin/users` | Admin | `?page&limit&search&role&isLocked`, không lộ password/token |
+| PATCH | `/api/admin/users/:id/lock` · `/:id/role` | Admin | Khoá/mở, đổi role; không cho tự thao tác lên mình |
+| POST | `/api/admin/uploads` | Admin | multipart `image` ≤ 5MB → Supabase Storage; chưa cấu hình trả 503 |
+| GET | `/api/admin/stats/overview` | Admin | User/sản phẩm/đơn theo trạng thái/doanh thu delivered |
+| GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — chỉ đơn delivered |
+| GET | `/api/admin/stats/top-products` | Admin | `?limit` — theo số lượng bán, bỏ đơn huỷ |
+| GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` |
 
 Các endpoint ML-related:
 

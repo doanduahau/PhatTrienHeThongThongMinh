@@ -24,7 +24,7 @@ const orderInclude = {
  * Checkout: kiểm tra giỏ + tồn kho + phí ship, tạo đơn và trừ kho
  * trong MỘT transaction. Mọi lỗi đều rollback toàn bộ.
  */
-export const checkout = async (userId, { shippingMethodId, shippingAddress, shippingPhone }) => {
+export const checkout = async (userId, { shippingMethodId, shippingAddress, shippingPhone, paymentMethod }) => {
   const order = await prisma.$transaction(async (tx) => {
     const cart = await tx.cart.findUnique({
       where: { userId },
@@ -72,6 +72,7 @@ export const checkout = async (userId, { shippingMethodId, shippingAddress, ship
         shippingMethodId,
         totalAmount,
         status: ORDER_STATUS.PENDING,
+        paymentMethod,
         shippingAddress,
         shippingPhone,
         items: {
@@ -216,4 +217,27 @@ export const getAllOrders = async ({ page, limit, status, userId, from, to }) =>
 
 export const updateStatusByAdmin = async (orderId, nextStatus, actor) => {
   return changeStatus({ orderId, nextStatus, actor });
+};
+
+export const updatePaymentStatusByAdmin = async (orderId, paymentStatus) => {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw notFound("Không tồn tại đơn hàng!");
+    if (order.status === ORDER_STATUS.CANCELLED) {
+      throw badRequest("Không thể cập nhật thanh toán cho đơn đã huỷ!");
+    }
+
+    const claimed = await tx.order.updateMany({
+      where: { id: orderId, paymentStatus: order.paymentStatus },
+      data: { paymentStatus },
+    });
+    if (claimed.count === 0) {
+      throw badRequest("Thanh toán vừa được cập nhật bởi thao tác khác, vui lòng tải lại!", {
+        orderId,
+      });
+    }
+
+    console.log(`[PAYMENT] #${orderId}: ${order.paymentStatus} -> ${paymentStatus}`);
+    return tx.order.findUnique({ where: { id: orderId }, include: orderInclude });
+  });
 };

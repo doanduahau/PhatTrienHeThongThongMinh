@@ -8,5 +8,6 @@ router.use(authenticate, requireAdmin);
 
 router.get("/", orderController.getAllOrders);
 router.patch("/:id/status", orderController.updateStatus);
+router.patch("/:id/payment", orderController.updatePaymentStatus);
 
 export default router;

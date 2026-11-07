@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DB_ID_MAX, ORDER_STATUS_VALUES, PAGINATION } from "../utils/constants.js";
+import { DB_ID_MAX, ORDER_STATUS_VALUES, PAGINATION, PAYMENT_METHOD, PAYMENT_STATUS } from "../utils/constants.js";
 
 export const createOrderSchema = z.object({
   shippingMethodId: z.coerce
@@ -16,6 +16,11 @@ export const createOrderSchema = z.object({
     .string({ required_error: "Số điện thoại là bắt buộc!" })
     .trim()
     .regex(/^[0-9+\s.-]{8,20}$/, "Số điện thoại không hợp lệ!"),
+  paymentMethod: z
+    .enum(Object.values(PAYMENT_METHOD), {
+      errorMap: () => ({ message: `paymentMethod chỉ nhận: ${Object.values(PAYMENT_METHOD).join(", ")}` }),
+    })
+    .default(PAYMENT_METHOD.COD),
 });
 
 export const orderIdParamSchema = z.object({
@@ -62,5 +67,11 @@ export const adminOrdersQuerySchema = z.object({
 export const updateOrderStatusSchema = z.object({
   status: z.enum(ORDER_STATUS_VALUES, {
     errorMap: () => ({ message: `status chỉ nhận: ${ORDER_STATUS_VALUES.join(", ")}` }),
+  }),
+});
+
+export const updatePaymentStatusSchema = z.object({
+  paymentStatus: z.enum(Object.values(PAYMENT_STATUS), {
+    errorMap: () => ({ message: `paymentStatus chỉ nhận: ${Object.values(PAYMENT_STATUS).join(", ")}` }),
   }),
 });
