@@ -45,7 +45,7 @@ const baseProductFields = {
     .trim()
     .url("imageUrl phải là URL hợp lệ!"),
   price: z.coerce.number({ required_error: "Giá là bắt buộc!" }).min(0, "Giá không được âm!").optional(),
-  rating: z.coerce.number().min(0, "Đánh giá thấp nhất là 0!").max(5, "Đánh giá cao nhất là 5!").optional(),
+  // Không nhận rating từ admin: điểm do khách hàng vote, tự tính trong rating.service.js
 };
 
 const detailField = { detail: z.any().optional() };
@@ -58,7 +58,6 @@ export const createProductSchema = z.object({
   stockQuantity: baseProductFields.stockQuantity,
   imageUrl: baseProductFields.imageUrl,
   price: baseProductFields.price,
-  rating: baseProductFields.rating,
   ...detailField,
 });
 
@@ -70,7 +69,6 @@ export const updateProductSchema = z.object({
   stockQuantity: baseProductFields.stockQuantity,
   imageUrl: baseProductFields.imageUrl.optional(),
   price: baseProductFields.price,
-  rating: baseProductFields.rating,
   ...detailField,
 });
 

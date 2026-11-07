@@ -32,3 +32,33 @@ export const loginSchema = z.object({
     .min(1, "Tài khoản không được để trống!"),
   password: z.string({ required_error: "Mật khẩu là bắt buộc!" }).min(1, "Mật khẩu không được để trống!"),
 });
+
+export const updateProfileSchema = z
+  .object({
+    email: email.optional(),
+    address: z.string().trim().max(255, "Địa chỉ tối đa 255 ký tự!").optional(),
+  })
+  .refine((data) => data.email !== undefined || data.address !== undefined, {
+    message: "Cần ít nhất một trường (email, address) để cập nhật!",
+  });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z
+    .string({ required_error: "Mật khẩu hiện tại là bắt buộc!" })
+    .min(1, "Mật khẩu hiện tại không được để trống!"),
+  newPassword: password,
+});
+
+export const forgotPasswordSchema = z.object({ email });
+
+const tokenField = z
+  .string({ required_error: "Token là bắt buộc!" })
+  .trim()
+  .min(1, "Token không được để trống!");
+
+export const resetPasswordSchema = z.object({
+  token: tokenField,
+  newPassword: password,
+});
+
+export const verifyEmailSchema = z.object({ token: tokenField });

@@ -76,9 +76,18 @@ Giá trị tiền/rating/decimal được trả về dạng **number** (ví dụ
 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/auth/register` | — | `{ username, email, password, address? }` |
-| POST | `/api/auth/login` | — | `{ account, password }` (username hoặc email) |
-| GET | `/api/auth/me` | Đăng nhập | Hồ sơ của mình |
+| POST | `/api/auth/register` | — | `{ username, email, password, address? }` — gửi email xác thực |
+| POST | `/api/auth/login` | — | `{ account, password }` (username hoặc email); tài khoản bị khoá trả 403 |
+| GET | `/api/auth/me` | Đăng nhập | Hồ sơ của mình (kèm `emailVerified`) |
+| PUT | `/api/auth/me` | Đăng nhập | `{ email?, address? }` — đổi email sẽ phải xác thực lại |
+| PUT | `/api/auth/password` | Đăng nhập | `{ currentPassword, newPassword }` |
+| POST | `/api/auth/forgot-password` | — | `{ email }` — gửi mã đặt lại (15 phút); email lạ vẫn trả 200 |
+| POST | `/api/auth/reset-password` | — | `{ token, newPassword }` |
+| POST | `/api/auth/verify-email` | — | `{ token }` — xác thực email (24 giờ) |
+| POST | `/api/auth/resend-verification` | Đăng nhập | Gửi lại email xác thực |
+
+Token reset/verify là chuỗi ngẫu nhiên 64 ký tự, DB chỉ lưu **hash SHA-256** + hạn dùng.
+Chưa cấu hình SMTP thì nội dung mail (kèm token) được in ra console server — đủ để test local.
 
 ### Danh mục, thương hiệu & sản phẩm
 
@@ -91,7 +100,20 @@ Giá trị tiền/rating/decimal được trả về dạng **number** (ví dụ
 | POST/PUT/DELETE | `/api/brands/:id` | Admin | Thêm/sửa/xoá thương hiệu (`name`) |
 | GET | `/api/products` | — | `?page&limit&categoryId&brandId&brand&slug&search&sort` (`sort`: newest, price_asc, price_desc, name_asc, rating_desc) |
 | GET | `/api/products/:id` | — | Chi tiết + `detail` theo loại; thương hiệu nằm ở `brand: { id, name }` |
-| POST/PUT/DELETE | `/api/products/:id` | Admin | `brandId` bắt buộc khi tạo; body có `detail` ứng với danh mục (không chứa `brand`) |
+| POST/PUT/DELETE | `/api/products/:id` | Admin | `brandId` bắt buộc khi tạo; body có `detail` ứng với danh mục (không chứa `brand`, không nhận `rating`) |
+| GET | `/api/products/:id/rating` | — | Điểm trung bình + số lượt chấm: `{ rating, ratingCount }` |
+| POST | `/api/products/:id/rating` | Đăng nhập | `{ score }` nguyên 1–5, không cần mua hàng; chấm lại = đổi điểm → `{ rating, ratingCount, myScore }` |
+| DELETE | `/api/products/:id/rating` | Đăng nhập | Rút đánh giá của mình → `{ rating, ratingCount, myScore: null }` |
+| GET | `/api/products/:id/reviews` | — | `?page&limit` — nhận xét kèm `username`, `score`, `content` |
+| POST | `/api/products/:id/reviews` | Đăng nhập | `{ score, content }` — **chỉ người đã mua** (đơn không huỷ); viết lại = sửa |
+| DELETE | `/api/products/:id/reviews` | Đăng nhập | Xoá nhận xét của mình, **giữ** phiếu sao |
+
+`rating` của sản phẩm là **trung bình tự tính** từ các lượt chấm trong bảng `ratings`
+(mỗi user 1 phiếu/sản phẩm, unique `user_id + product_id`), kèm `ratingCount` = số phiếu.
+Admin không còn điền `rating` tay — gửi lên sẽ bị lặng lẽ bỏ qua. Rating mẫu từ seed hiển thị
+tới lượt chấm thật đầu tiên (`ratingCount: 0` nghĩa là chưa có phiếu thật); hết phiếu thì về `0`.
+Review và rating dùng chung một bảng phiếu `ratings`: POST review tự upsert phiếu sao tương ứng,
+xoá review chỉ xoá phần chữ. Nhờ vậy trung bình luôn tính từ một nguồn duy nhất.
 
 ### Gợi ý & tìm kiếm thông minh
 
@@ -121,12 +143,14 @@ backend tự fallback bằng Prisma và trả `data.source = "fallback"`; API v�
 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/orders` | Đăng nhập | Checkout từ giỏ: `{ shippingMethodId, shippingAddress, shippingPhone }` |
+| POST | `/api/orders` | Đăng nhập | Checkout từ giỏ: `{ shippingMethodId, shippingAddress, shippingPhone, paymentMethod? }` (`cod` mặc định, hoặc `bank_transfer`) |
 | GET | `/api/orders` | Đăng nhập | `?page&limit&status` |
-| GET | `/api/orders/:id` | Đăng nhập | Chi tiết đơn của mình |
+| GET | `/api/orders/:id` | Đăng nhập | Chi tiết đơn của mình (kèm `paymentMethod`, `paymentStatus`) |
 | PATCH | `/api/orders/:id/cancel` | Đăng nhập | Huỷ đơn `pending` |
 | GET | `/api/admin/orders` | Admin | `?page&limit&status&userId&from&to` |
 | PATCH | `/api/admin/orders/:id/status` | Admin | `{ status }` theo máy trạng thái |
+| PATCH | `/api/admin/orders/:id/payment` | Admin | `{ paymentStatus: "paid" \| "unpaid" }` — xác nhận chuyển khoản; đơn đã huỷ trả 400 |
+| GET | `/api/payment-info` | — | `{ methods, bank }` — thông tin chuyển khoản cho client hiển thị |
 | GET | `/api/shipping-methods` | — | Phương thức đang hoạt động (admin thấy cả đã tắt) |
 | POST/PUT/DELETE | `/api/shipping-methods/:id` | Admin | CRUD phí vận chuyển |
 
@@ -138,6 +162,55 @@ pending ──> confirmed ──> shipping ──> delivered
 ```
 
 Chuyển sai luồng trả 400 kèm `data.allowedStatuses`.
+
+### Thanh toán
+
+- `paymentMethod`: `cod` (mặc định) hoặc `bank_transfer`. `paymentStatus`: `unpaid` → `paid`.
+- Chuyển khoản: client lấy thông tin ngân hàng từ `GET /api/payment-info` (đọc từ env
+  `BANK_NAME`, `BANK_ACCOUNT`, `BANK_HOLDER`; chưa cấu hình thì `bank: null`),
+  khách chuyển khoản thủ công, admin xác nhận bằng `PATCH /api/admin/orders/:id/payment`.
+- Đổi `paymentStatus` dùng optimistic claim (`updateMany` theo trạng thái hiện tại) trong
+  transaction — hai admin bấm xác nhận cùng lúc chỉ một người thành công.
+
+### Quản lý user (Admin)
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/admin/users` | Admin | `?page&limit&search&role&isLocked` — không lộ password/token |
+| PATCH | `/api/admin/users/:id/lock` | Admin | `{ isLocked: true/false }` — khoá/mở tài khoản |
+| PATCH | `/api/admin/users/:id/role` | Admin | `{ role: "admin" \| "customer" }` |
+
+Không thể tự khoá hoặc tự đổi role chính mình (400). User bị khoá: mọi API mang token cũ
+trả 403 ngay (middleware đọc DB mỗi request), đăng nhập cũng bị chặn.
+
+### Upload ảnh (Admin)
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/admin/uploads` | Admin | multipart `image` (jpeg/png/webp/gif, tối đa 5MB) → `{ url, path, size, contentType }` |
+
+Ảnh đẩy lên **Supabase Storage** (bucket `SUPABASE_STORAGE_BUCKET`, mặc định `product-images`,
+phải để public). Chưa cấu hình `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` thì trả 503.
+Dùng `url` trả về làm `imageUrl` khi tạo/sửa sản phẩm.
+
+### Thống kê (Admin)
+
+| Method | Path | Quyền | Mô tả |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/admin/stats/overview` | Admin | Tổng user/sản phẩm, đơn theo trạng thái, doanh thu đơn `delivered`, số đơn chờ thanh toán |
+| GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — doanh thu đơn `delivered` theo kỳ |
+| GET | `/api/admin/stats/top-products` | Admin | `?limit` — bán chạy theo số lượng (bỏ đơn huỷ) |
+| GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` — sản phẩm sắp hết hàng |
+
+### Biến môi trường bổ sung
+
+Ngoài các biến cũ (xem `.env.example`), các tính năng mới cần:
+
+| Nhóm | Biến | Ghi chú |
+| :--- | :--- | :--- |
+| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `APP_URL` | Thiếu `SMTP_HOST` → mail in ra console (test local được ngay) |
+| Storage | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Thiếu → upload trả 503 |
+| Ngân hàng | `BANK_NAME`, `BANK_ACCOUNT`, `BANK_HOLDER` | Hiển thị qua `/api/payment-info` |
 
 ## 6. Tích hợp ML service
 
@@ -169,3 +242,8 @@ luôn mới. ML kết nối PostgreSQL bằng tài khoản **read-only**.
 - Tồn kho trừ bằng `updateMany` có điều kiện `stockQuantity >= quantity` trong transaction để tránh bán âm kho.
 - Bảng chi tiết sản phẩm map theo `categories.slug` (`chuot`, `ban-phim`, `tai-nghe`, `lot-chuot`, `setup`).
 - Huỷ đơn chỉ hoàn kho một lần nhờ kiểm tra transition trong transaction.
+- Chấm điểm khoá dòng sản phẩm (`SELECT ... FOR UPDATE`) trong transaction trước khi tính lại trung bình `rating`/`ratingCount`, chống ghi đè khi nhiều người chấm đồng thời.
+- Review kiểm tra người mua bằng `order_items` thuộc đơn **không huỷ** của chính user đó; upsert review và upsert phiếu sao chạy chung một transaction với khoá dòng sản phẩm.
+- Token quên mật khẩu / xác thực email: sinh ngẫu nhiên, chỉ lưu hash SHA-256 trong DB, một lần dùng (xoá sau khi dùng), có hạn.
+- `authenticate` đọc lại user từ DB mỗi request: role luôn mới và tài khoản bị khoá mất hiệu lực token ngay lập tức.
+- Doanh thu chỉ tính đơn `delivered`; top sản phẩm bỏ đơn `cancelled`.

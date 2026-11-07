@@ -8,8 +8,12 @@ import productRoute from "./routes/product.route.js";
 import cartRoute from "./routes/cart.route.js";
 import orderRoute from "./routes/order.route.js";
 import adminOrderRoute from "./routes/admin.order.route.js";
+import adminUserRoute from "./routes/admin.user.route.js";
+import uploadRoute from "./routes/upload.route.js";
+import statsRoute from "./routes/stats.route.js";
 import shippingRoute from "./routes/shipping.route.js";
 import recommendationRoute from "./routes/recommendation.route.js";
+import paymentRoute from "./routes/payment.route.js";
 import { sendSuccess, sendError } from "./utils/response.js";
 import { env } from "./config/env.js";
 
@@ -36,8 +40,12 @@ app.use("/api/products", productRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/admin/orders", adminOrderRoute);
+app.use("/api/admin/users", adminUserRoute);
+app.use("/api/admin/uploads", uploadRoute);
+app.use("/api/admin/stats", statsRoute);
 app.use("/api/shipping-methods", shippingRoute);
 app.use("/api/recommendations", recommendationRoute);
+app.use("/api/payment-info", paymentRoute);
 
 // 4. Xử lý 404 (route không tồn tại)
 app.use((req, res) => {

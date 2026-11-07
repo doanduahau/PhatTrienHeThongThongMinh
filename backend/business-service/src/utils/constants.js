@@ -28,6 +28,21 @@ export const RESTOCK_ON_CANCEL = [ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED];
 
 export const ORDER_STATUS_VALUES = Object.values(ORDER_STATUS);
 
+export const PAYMENT_METHOD = Object.freeze({
+  COD: "cod",
+  BANK_TRANSFER: "bank_transfer",
+});
+
+export const PAYMENT_STATUS = Object.freeze({
+  UNPAID: "unpaid",
+  PAID: "paid",
+});
+
+export const REVIEW_CONTENT_MAX = 2000;
+export const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+export const RESET_TOKEN_TTL_MINUTES = 15;
+export const VERIFY_TOKEN_TTL_HOURS = 24;
+
 export const PAGINATION = Object.freeze({
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 10,

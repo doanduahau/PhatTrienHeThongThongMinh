@@ -15,10 +15,18 @@ model User {
   email     String   @unique @db.VarChar(100)
   address   String?  @db.Text
   role      String   @default("customer") @db.VarChar(20)
+  emailVerified Boolean @default(false) @map("email_verified")
+  isLocked  Boolean  @default(false) @map("is_locked")
+  resetTokenHash String? @map("reset_token_hash") @db.VarChar(64)
+  resetTokenExpires DateTime? @map("reset_token_expires")
+  verifyTokenHash String? @map("verify_token_hash") @db.VarChar(64)
+  verifyTokenExpires DateTime? @map("verify_token_expires")
   createdAt DateTime @default(now()) @map("created_at")
 
   cart   Cart?
   orders Order[]
+  ratings Rating[]
+  reviews Review[]
 
   @@map("users")
 }
@@ -51,6 +59,38 @@ model CartItem {
   @@map("cart_items")
 }
 
+/// Đánh giá sao 1–5 của khách hàng (mỗi user 1 vote / sản phẩm)
+model Rating {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  productId Int      @map("product_id")
+  score     Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@map("ratings")
+}
+
+/// Nhận xét chữ của người đã mua (điểm sao đồng bộ sang bảng ratings)
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  productId Int      @map("product_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@map("reviews")
+}
+
 model ShippingMethod {
   id            Int      @id @default(autoincrement())
   name          String   @db.VarChar(100)
@@ -70,6 +110,8 @@ model Order {
   shippingMethodId Int      @map("shipping_method_id")
   totalAmount      Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
   status           String   @default("pending") @db.VarChar(50)
+  paymentMethod    String   @default("cod") @map("payment_method") @db.VarChar(20)
+  paymentStatus    String   @default("unpaid") @map("payment_status") @db.VarChar(20)
   shippingAddress  String   @map("shipping_address") @db.Text
   shippingPhone    String   @map("shipping_phone") @db.VarChar(20)
   createdAt        DateTime @default(now()) @map("created_at")
@@ -130,12 +172,15 @@ model Product {
   imageUrl      String   @map("image_url") @db.Text
   price         Decimal  @default(0) @db.Decimal(15, 2)
   rating        Decimal  @default(0) @db.Decimal(3, 2)
+  ratingCount   Int      @default(0) @map("rating_count")
   createdAt     DateTime @default(now()) @map("created_at")
 
   category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   brand      Brand       @relation(fields: [brandId], references: [id], onDelete: Restrict)
   cartItems  CartItem[]
   orderItems OrderItem[]
+  ratings    Rating[]
+  reviews    Review[]
   mouse      Mouse?
   keyboard   Keyboard?
   headphone  Headphone?
