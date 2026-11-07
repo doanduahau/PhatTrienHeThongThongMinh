@@ -1,7 +1,22 @@
+# Node
 node_modules/
-.env
-.env.test
 dist/
 coverage/
 *.log
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.joblib.tmp
+
+# Environments
+.env
+.env.test
+.env.local
+
+# OS
 .DS_Store
+Thumbs.db
