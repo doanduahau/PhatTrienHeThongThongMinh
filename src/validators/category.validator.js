@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DB_ID_MAX } from "../utils/constants.js";
 
 const name = z
   .string({ required_error: "Tên danh mục là bắt buộc!" })
@@ -18,5 +19,9 @@ export const createCategorySchema = z.object({ name, slug });
 export const updateCategorySchema = z.object({ name: name.optional(), slug: slug.optional() });
 
 export const categoryIdParamSchema = z.object({
-  id: z.coerce.number({ invalid_type_error: "id phải là số!" }).int("id phải là số nguyên!").positive("id phải lớn hơn 0!"),
+  id: z.coerce
+    .number({ invalid_type_error: "id phải là số!" })
+    .int("id phải là số nguyên!")
+    .positive("id phải lớn hơn 0!")
+    .max(DB_ID_MAX, "id không hợp lệ!"),
 });

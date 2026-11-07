@@ -1,3 +1,5 @@
+import { serializeDecimals } from "./money.js";
+
 /**
  * Trả về kết quả thành công kèm dữ liệu (thêm, sửa, xóa, lấy danh sách)
  */
@@ -5,7 +7,7 @@ export const sendSuccess = (res, data = null, message = "Thao tác thành công!
   return res.status(200).json({
     status: "200",
     message,
-    data,
+    data: serializeDecimals(data),
   });
 };
 
@@ -48,5 +50,5 @@ export const sendAppError = (res, error, fallbackMessage = "Thao tác thất b�
   }
 
   console.error("[SERVICE ERROR]", error);
-  return sendError(res, fallbackMessage, "400", error.message, 400);
+  return sendError(res, fallbackMessage, "500", null, 500);
 };

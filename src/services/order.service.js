@@ -102,7 +102,7 @@ export const getMyOrders = async (userId, { page, limit, status }) => {
 
   return {
     items,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 },
+    pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
   };
 };
 
@@ -115,21 +115,41 @@ export const getMyOrderById = async (userId, orderId) => {
   return order;
 };
 
-const changeStatus = async ({ order, nextStatus, actor }) => {
-  const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
-
-  if (actor.role !== ROLES.ADMIN && order.status !== ORDER_STATUS.PENDING) {
-    throw forbidden("Bạn chỉ có thể huỷ đơn hàng đang chờ xác nhận!");
-  }
-
-  if (!allowed.includes(nextStatus)) {
-    throw badRequest(`Không thể chuyển đơn từ "${order.status}" sang "${nextStatus}"!`, {
-      currentStatus: order.status,
-      allowedStatuses: allowed,
-    });
-  }
-
+const changeStatus = async ({ orderId, nextStatus, actor, ownerId = null }) => {
   return prisma.$transaction(async (tx) => {
+    // Đọc đơn bên trong transaction để mọi kiểm tra và ghi trạng thái dùng cùng một snapshot.
+    const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
+
+    if (!order || (ownerId !== null && order.userId !== ownerId)) {
+      throw notFound("Không tồn tại đơn hàng!");
+    }
+
+    if (actor.role !== ROLES.ADMIN && order.status !== ORDER_STATUS.PENDING) {
+      throw forbidden("Bạn chỉ có thể huỷ đơn hàng đang chờ xác nhận!");
+    }
+
+    const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
+    if (!allowed.includes(nextStatus)) {
+      throw badRequest(`Không thể chuyển đơn từ "${order.status}" sang "${nextStatus}"!`, {
+        currentStatus: order.status,
+        allowedStatuses: allowed,
+      });
+    }
+
+    // Chỉ một request được "giành" quyền đổi trạng thái. Request thua sẽ thấy count = 0
+    // sau khi PostgreSQL khoá dòng, nhờ đó không hoàn kho hai lần.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: { status: nextStatus },
+    });
+
+    if (claimed.count === 0) {
+      throw badRequest("Đơn hàng vừa được thay đổi bởi thao tác khác, vui lòng tải lại!", {
+        orderId: order.id,
+        currentStatus: order.status,
+      });
+    }
+
     if (nextStatus === ORDER_STATUS.CANCELLED) {
       for (const item of order.items) {
         await tx.product.update({
@@ -139,11 +159,7 @@ const changeStatus = async ({ order, nextStatus, actor }) => {
       }
     }
 
-    const updated = await tx.order.update({
-      where: { id: order.id },
-      data: { status: nextStatus },
-      include: orderInclude,
-    });
+    const updated = await tx.order.findUnique({ where: { id: order.id }, include: orderInclude });
 
     console.log(
       `[ORDER] #${order.id}: ${order.status} -> ${nextStatus} bởi ${actor.role} #${actor.id}`,
@@ -155,13 +171,11 @@ const changeStatus = async ({ order, nextStatus, actor }) => {
 
 /** Khách tự huỷ đơn của mình (chỉ khi pending) */
 export const cancelMyOrder = async (userId, orderId) => {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
-  if (!order || order.userId !== userId) throw notFound("Không tồn tại đơn hàng!");
-
   return changeStatus({
-    order,
+    orderId,
     nextStatus: ORDER_STATUS.CANCELLED,
     actor: { id: userId, role: ROLES.CUSTOMER },
+    ownerId: userId,
   });
 };
 
@@ -188,12 +202,10 @@ export const getAllOrders = async ({ page, limit, status, userId, from, to }) =>
 
   return {
     items,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 0 },
+    pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
   };
 };
 
 export const updateStatusByAdmin = async (orderId, nextStatus, actor) => {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
-  if (!order) throw notFound("Không tồn tại đơn hàng!");
-  return changeStatus({ order, nextStatus, actor });
+  return changeStatus({ orderId, nextStatus, actor });
 };

@@ -7,14 +7,12 @@ const productInclude = {
   product: { include: { category: { select: { id: true, name: true, slug: true } } } },
 };
 
-export const getOrCreateCart = async (userId) => {
-  const existing = await prisma.cart.findUnique({ where: { userId } });
-  if (existing) return existing;
-  return prisma.cart.create({ data: { userId } });
-};
-
-const withCartContext = (tx, userId) =>
-  tx.cart.findUnique({ where: { userId } }).then((cart) => cart ?? tx.cart.create({ data: { userId } }));
+export const getOrCreateCart = (userId) =>
+  prisma.cart.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
 
 export const getCart = async (userId) => {
   const cart = await getOrCreateCart(userId);
@@ -52,34 +50,37 @@ export const getCart = async (userId) => {
 
 export const addItem = async (userId, { productId, quantity }) => {
   return prisma.$transaction(async (tx) => {
-    const cart = await withCartContext(tx, userId);
     const product = await tx.product.findUnique({ where: { id: productId } });
     if (!product) throw notFound("Không tồn tại sản phẩm!");
 
-    const existing = await tx.cartItem.findUnique({
-      where: { cartId_productId: { cartId: cart.id, productId } },
+    const cart = await tx.cart.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
     });
 
-    const nextQuantity = (existing?.quantity ?? 0) + quantity;
+    // Cộng dồn nguyên tử ở tầng DB để không mất cập nhật khi thêm đồng thời.
+    // Nếu vượt giới hạn, throw để transaction rollback lại phép cộng.
+    const item = await tx.cartItem.upsert({
+      where: { cartId_productId: { cartId: cart.id, productId } },
+      create: { cartId: cart.id, productId, quantity },
+      update: { quantity: { increment: quantity } },
+    });
 
-    if (nextQuantity > MAX_CART_QUANTITY) {
+    if (item.quantity > MAX_CART_QUANTITY) {
       throw badRequest(`Mỗi sản phẩm chỉ được thêm tối đa ${MAX_CART_QUANTITY} cái!`, {
         maxQuantity: MAX_CART_QUANTITY,
       });
     }
 
-    if (nextQuantity > product.stockQuantity) {
+    if (item.quantity > product.stockQuantity) {
       throw badRequest(`Sản phẩm "${product.name}" chỉ còn ${product.stockQuantity} trong kho!`, {
         productId,
         available: product.stockQuantity,
       });
     }
 
-    if (existing) {
-      return tx.cartItem.update({ where: { id: existing.id }, data: { quantity: nextQuantity } });
-    }
-
-    return tx.cartItem.create({ data: { cartId: cart.id, productId, quantity: nextQuantity } });
+    return item;
   });
 };
 

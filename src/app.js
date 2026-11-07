@@ -43,12 +43,27 @@ app.use((req, res) => {
 // 5. Bắt lỗi máy chủ toàn cục
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
-  if (err?.type === "entity.parse.failed") {
-    return sendError(res, "Dữ liệu JSON không hợp lệ!", "400", null, 400);
+  const bodyParserErrors = {
+    "entity.parse.failed": ["Dữ liệu JSON không hợp lệ!", "400", 400],
+    "entity.too.large": ["Dữ liệu gửi lên quá lớn!", "413", 413],
+    "encoding.unsupported": ["Kiểu mã hóa không được hỗ trợ!", "415", 415],
+    "charset.unsupported": ["Bộ ký tự không được hỗ trợ!", "415", 415],
+  };
+
+  const known = bodyParserErrors[err?.type];
+  if (known) {
+    return sendError(res, known[0], known[1], null, known[2]);
+  }
+
+  // Lỗi 4xx khác (body-parser, router...) trả thông báo chung, không lộ chi tiết nội bộ
+  const httpStatus = Number(err?.status || err?.statusCode) || 500;
+  if (httpStatus >= 400 && httpStatus < 500) {
+    console.error("[REQUEST ERROR]", err);
+    return sendError(res, "Yêu cầu không hợp lệ!", String(httpStatus), null, httpStatus);
   }
 
   console.error("[SERVER ERROR]", err);
-  return sendError(res, err.message || "Đã xảy ra lỗi máy chủ!", "500", null, 500);
+  return sendError(res, "Đã xảy ra lỗi máy chủ!", "500", null, 500);
 });
 
 export default app;

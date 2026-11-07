@@ -32,6 +32,8 @@ export const PAGINATION = Object.freeze({
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 10,
   MAX_LIMIT: 100,
+  // Giữ (page - 1) * MAX_LIMIT nằm trong giới hạn int4 của PostgreSQL
+  MAX_PAGE: 21474836,
 });
 
 /** Danh mục có bảng chi tiết riêng (map slug -> model Prisma) */
@@ -44,3 +46,6 @@ export const PRODUCT_DETAIL_SLUGS = Object.freeze({
 });
 
 export const MAX_CART_QUANTITY = 99;
+
+/** Giá trị lớn nhất của cột Int (int4) trong PostgreSQL/Prisma */
+export const DB_ID_MAX = 2147483647;

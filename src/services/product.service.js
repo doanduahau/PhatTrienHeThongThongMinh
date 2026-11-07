@@ -44,7 +44,7 @@ export const getAll = async ({ page, limit, sort, ...filters }) => {
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit) || 0,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     },
   };
 };
@@ -102,7 +102,13 @@ export const update = async (id, payload) => {
   });
   if (!existing) throw notFound("Không tồn tại sản phẩm!");
 
-  if (productData.categoryId && productData.categoryId !== existing.categoryId) {
+  const changingCategory =
+    Boolean(productData.categoryId) && productData.categoryId !== existing.categoryId;
+
+  let targetSlug = existing.category.slug;
+  let parsed = null;
+
+  if (changingCategory) {
     const currentDetail = await findDetailRow(existing.category.slug, id);
     if (currentDetail) {
       throw badRequest(
@@ -110,9 +116,20 @@ export const update = async (id, payload) => {
         { currentCategoryId: existing.categoryId, requestedCategoryId: productData.categoryId },
       );
     }
-  }
 
-  const parsed = detail === undefined ? null : parseDetail(existing.category.slug, detail);
+    const targetCategory = await prisma.category.findUnique({
+      where: { id: productData.categoryId },
+    });
+    if (!targetCategory) throw notFound("Danh mục không tồn tại!");
+    targetSlug = targetCategory.slug;
+
+    // Danh mục mới có bảng chi tiết thì bắt buộc phải kèm thông số hợp lệ.
+    if (getDetailModel(targetSlug)) {
+      parsed = parseDetail(targetSlug, detail);
+    }
+  } else if (detail !== undefined) {
+    parsed = parseDetail(existing.category.slug, detail);
+  }
 
   return prisma.$transaction(async (tx) => {
     const product = await tx.product.update({
@@ -128,7 +145,7 @@ export const update = async (id, payload) => {
         update: parsed.data,
       });
     } else {
-      detailRow = await findDetailRow(existing.category.slug, id);
+      detailRow = await findDetailRow(targetSlug, id);
     }
 
     return { ...product, detail: detailRow };

@@ -325,15 +325,46 @@ const main = async () => {
   console.log(`[SEED] ${1 + customers.length} người dùng`);
 
   let createdProducts = 0;
+  const seenSeedKeys = new Set();
+
   for (const product of products) {
     const category = await prisma.category.findUnique({ where: { slug: product.slug } });
-    const existing = await prisma.product.findFirst({ where: { name: product.name } });
-    if (existing) continue;
+    if (!category) throw new Error(`Không tìm thấy danh mục cho sản phẩm: ${product.name}`);
 
-    // product.detail dạng { mouse: {...} } -> cần bọc { create: {...} } cho nested write
-    const detailRelations = Object.fromEntries(
-      Object.entries(product.detail).map(([relation, data]) => [relation, { create: data }]),
-    );
+    const [relation, detailData] = Object.entries(product.detail)[0];
+    // Khóa ổn định theo loại + thương hiệu: đổi tên hiển thị trong seed không sinh bản ghi mới.
+    const seedKey = `${product.slug}-${detailData.brand}`;
+    if (seenSeedKeys.has(seedKey)) throw new Error(`Seed key bị trùng: ${seedKey}`);
+    seenSeedKeys.add(seedKey);
+
+    const imageUrl = `https://picsum.photos/seed/gear-${seedKey}/600/400`;
+    const existing = await prisma.product.findFirst({
+      where: { OR: [{ imageUrl }, { name: product.name }] },
+    });
+
+    if (existing) {
+      // Cập nhật thông tin mô tả, giữ nguyên tồn kho thực tế sau khi đã bán hàng.
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: {
+          categoryId: category.id,
+          name: product.name,
+          color: product.color,
+          price: product.price,
+          rating: product.rating,
+          imageUrl,
+        },
+      });
+      await prisma[relation].upsert({
+        where: { productId: existing.id },
+        create: { ...detailData, productId: existing.id },
+        update: detailData,
+      });
+      continue;
+    }
+
+    // product.detail dùng { mouse: {...} } -> cần bọc { create: {...} } cho nested write
+    const detailRelations = { [relation]: { create: detailData } };
 
     await prisma.product.create({
       data: {
@@ -343,7 +374,7 @@ const main = async () => {
         price: product.price,
         stockQuantity: product.stockQuantity,
         rating: product.rating,
-        imageUrl: `https://picsum.photos/seed/gear-${encodeURIComponent(product.name)}/600/400`,
+        imageUrl,
         ...detailRelations,
       },
     });

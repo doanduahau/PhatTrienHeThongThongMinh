@@ -125,4 +125,25 @@ describe("Bước 3 + 4 - Product", () => {
     expect(Number(res.body.data.price)).toBe(450000);
     expect(Number(res.body.data.detail.weightG)).toBe(55);
   });
+
+  test("Decimal được trả về dạng number, kể cả trong detail", async () => {
+    const created = await request(app)
+      .post("/api/products")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(validMouseProduct());
+
+    const res = await request(app).get(`/api/products/${created.body.data.id}`);
+
+    expect(typeof res.body.data.price).toBe("number");
+    expect(typeof res.body.data.rating).toBe("number");
+    expect(typeof res.body.data.detail.weightG).toBe("number");
+  });
+
+  test("pagination.totalPages tối thiểu là 1 khi không có bản ghi", async () => {
+    const res = await request(app).get("/api/products").query({ search: "zzz-khong-co" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.pagination.total).toBe(0);
+    expect(res.body.data.pagination.totalPages).toBe(1);
+  });
 });

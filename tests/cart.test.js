@@ -5,13 +5,14 @@ import { resetDatabase, createCategory, createProduct } from "./helpers/db.js";
 import { registerUser } from "./helpers/api.js";
 
 let token;
+let user;
 let product;
 
 beforeEach(async () => {
   await resetDatabase();
   const category = await createCategory();
   product = await createProduct({ categoryId: category.id, price: 500000, stockQuantity: 10 });
-  ({ token } = await registerUser(app));
+  ({ token, user } = await registerUser(app));
 });
 
 afterAll(async () => {
@@ -66,5 +67,17 @@ describe("Bước 5 - Cart", () => {
   test("cần đăng nhập mới xem được giỏ", async () => {
     const res = await request(app).get("/api/cart");
     expect(res.status).toBe(401);
+  });
+
+  test("tự tạo lại giỏ nếu user chưa có cart", async () => {
+    await prisma.cart.deleteMany({ where: { userId: user.id } });
+
+    const res = await auth(request(app).post("/api/cart/items")).send({
+      productId: product.id,
+      quantity: 1,
+    });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.cart.count({ where: { userId: user.id } })).toBe(1);
   });
 });

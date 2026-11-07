@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PAGINATION, PRODUCT_DETAIL_SLUGS } from "../utils/constants.js";
+import { DB_ID_MAX, PAGINATION, PRODUCT_DETAIL_SLUGS } from "../utils/constants.js";
 
 const connectivity3 = z.enum(["wired", "wireless", "tri_mode"], {
   errorMap: () => ({ message: "connectivity chỉ nhận: wired, wireless, tri_mode" }),
@@ -11,7 +11,8 @@ const baseProductFields = {
   categoryId: z.coerce
     .number({ required_error: "categoryId là bắt buộc!" })
     .int("categoryId phải là số nguyên!")
-    .positive("categoryId phải lớn hơn 0!"),
+    .positive("categoryId phải lớn hơn 0!")
+    .max(DB_ID_MAX, "categoryId không hợp lệ!"),
   name: z
     .string({ required_error: "Tên sản phẩm là bắt buộc!" })
     .trim()
@@ -52,21 +53,30 @@ export const updateProductSchema = z.object({
 });
 
 export const productQuerySchema = z.object({
-  page: z.coerce.number().int().min(1, "page phải >= 1!").default(PAGINATION.DEFAULT_PAGE),
+  page: z.coerce
+    .number()
+    .int()
+    .min(1, "page phải >= 1!")
+    .max(PAGINATION.MAX_PAGE, `page tối đa ${PAGINATION.MAX_PAGE}!`)
+    .default(PAGINATION.DEFAULT_PAGE),
   limit: z.coerce
     .number()
     .int()
     .min(1, "limit phải >= 1!")
     .max(PAGINATION.MAX_LIMIT, `limit tối đa ${PAGINATION.MAX_LIMIT}!`)
     .default(PAGINATION.DEFAULT_LIMIT),
-  categoryId: z.coerce.number().int().positive("categoryId phải lớn hơn 0!").optional(),
+  categoryId: z.coerce.number().int().positive("categoryId phải lớn hơn 0!").max(DB_ID_MAX, "categoryId không hợp lệ!").optional(),
   slug: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
   sort: z.enum(["newest", "price_asc", "price_desc", "name_asc"]).default("newest"),
 });
 
 export const productIdParamSchema = z.object({
-  id: z.coerce.number().int("id phải là số nguyên!").positive("id phải lớn hơn 0!"),
+  id: z.coerce
+    .number()
+    .int("id phải là số nguyên!")
+    .positive("id phải lớn hơn 0!")
+    .max(DB_ID_MAX, "id không hợp lệ!"),
 });
 
 /* --------------------- Thông số chi tiết theo từng loại ------------------- */

@@ -4,7 +4,7 @@ Tài liệu này để một agent khác review và test **độc lập**, khôn
 
 - Repo: backend Express + Prisma cho shop gear gaming.
 - Nhánh: `master`, **11 commit** (chia theo 11 bước của `PLAN.md`), chưa push.
-- Trạng thái: working tree sạch, `npm test` xanh 30/30, DB chạy bằng Docker.
+- Trạng thái: working tree sạch, `npm test` xanh 61/61, DB chạy bằng Docker.
 - Nguồn yêu cầu: `DBHeThongThongMinh.txt` (DBML), `express-backend.md` (quy chuẩn code), `PLAN.md` (kế hoạch 11 bước).
 
 ---
@@ -22,14 +22,14 @@ Tài liệu này để một agent khác review và test **độc lập**, khôn
 | 6 | Phương thức vận chuyển (khách xem, admin CRUD) | `e374e97` |
 | 7 | Checkout transaction, snapshot giá, quản trị đơn | `4a189ba` |
 | 8 | API admin đổi trạng thái + vòng đời đơn + hoàn kho | `7699121` |
-| 9 | 30 test Jest/Supertest, script DB test, Postman collection | `18a58cd` |
+| 9 | Test Jest/Supertest, script DB test, Postman collection | `18a58cd` |
 | 10 | README hướng dẫn chạy, API, làm việc nhóm | `8487202` |
 
 **Cấu trúc thư mục**
 
 ```text
 prisma/            schema.prisma, migrations/, seed.js
-scripts/           prepareTestDb.js (tạo DB test từ DATABASE_URL)
+scripts/           prepareTestDb.js (tạo/xoá DB test), testRunner.js (chạy Jest với DB riêng)
 src/
   clients/         prisma.client.js
   config/          env.js
@@ -41,7 +41,7 @@ src/
   validators/      6 schema Zod + validate.js
   app.js
 server.js
-tests/             5 file test + helpers/
+tests/             11 file test + helpers/
 docs/              postman_collection.json
 ```
 
@@ -74,14 +74,15 @@ docs/              postman_collection.json
 | Migration | `npx prisma migrate deploy` | `All migrations have been successfully applied.` |
 | Seed | `npm run seed` | 5 danh mục, 3 shipping, 3 user, 15 sản phẩm |
 | Seed lặp lại | `npm run seed` (lần 2) | `0 sản phẩm mới` — không sinh trùng |
-| Test | `npm test` | **5 suites / 30 tests passed** |
-| DB test | log `pretest` | `Database test sẵn sàng: gear_shop_test @ localhost:5433` |
+| Test | `npm test` | **11 suites / 61 tests passed** |
+| DB test | log `testRunner` | Tạo database test tên duy nhất, migrate, chạy Jest rồi tự xoá |
+| Test song song | 2 lần `npm test` cùng lúc | **Cả hai 61/61**, dùng 2 database riêng, không đụng nhau |
 | Smoke API | `curl /api/health` | 200 `{"status":"200",...}` |
 | Smoke 404 | `curl /api/khong-ton-tai` | 404 đúng format `sendError` |
 | Smoke JSON hỏng | `POST /api/auth/login` body `{bad` | 400 `"Dữ liệu JSON không hợp lệ!"` |
 | Smoke dữ liệu | `curl '/api/products?limit=2&sort=price_desc'` | trả sản phẩm từ DB Docker |
 
-Phân bổ test: `auth` 5, `product` 7, `cart` 5, `order` 7, `orderStatus` 6.
+Phân bổ test: `auth` 5, `product` 9, `productLifecycle` 4, `cart` 6, `order` 7, `orderStatus` 6, `category` 5, `shipping` 5, `adminOrder` 4, `concurrency` 5, `errorHandling` 5.
 
 ---
 
@@ -93,7 +94,7 @@ cp .env.example .env
 docker compose up -d          # chờ healthy
 npx prisma migrate deploy
 npm run seed
-npm test                      # tự tạo gear_shop_test
+npm test                      # tự tạo database test riêng, chạy xong tự xoá
 npm run dev                   # hoặc npm start
 ```
 
@@ -119,19 +120,21 @@ Quy ước response mọi endpoint: `{ "status": "200", "message": "...", "data"
 
 ---
 
-## 5. Điểm rủi ro cần reviewer soi kỹ (chưa được test)
+## 5. Rủi ro đã rà soát & trạng thái
 
-1. **Huỷ đơn đồng thời có thể hoàn kho 2 lần.** `changeStatus` đọc `order` **ngoài** transaction rồi mới `update`, không có điều kiện `status = trạng thái cũ`. Hai request huỷ song song đều thấy `pending` → cả hai chạy nhánh cộng kho. Test hiện chỉ kiểm tra tuần tự.
-2. **`cart.addItem` có thể lost update** khi 2 request cùng lúc: đọc `existing.quantity` rồi ghi đè, isolation mặc định Read Committed.
-3. **Không có test** cho: CRUD category, CRUD shipping, filter `from/to/userId` của admin orders, đổi `categoryId` khi sản phẩm **chưa** có detail, xoá sản phẩm đã nằm trong đơn.
-4. **Global error handler trả `err.message`** ra client với status 500 → lộ chi tiết nội bộ nếu là lỗi Prisma.
-5. **`GET /api/shipping-methods`** với `Authorization` không hợp lệ trả 401 thay vì coi như khách (hành vi có chủ ý, cần xác nhận lại yêu cầu).
-6. **Decimal serialize thành string** (`"4590000"`), client phải tự `Number()` — dễ gây lỗi cộng tiền ở frontend.
-7. `pagination.totalPages = 0` khi không có bản ghi (một số client mong đợi 1).
-8. `POST`/`DELETE` đều trả 200, không dùng 201/204 (theo quy ước response chung của dự án).
-9. Không có rate limit, refresh token, khoá tài khoản; `JWT_SECRET` trong `.env.example` chỉ là mẫu.
-10. Test dùng chung một DB test và chạy `--runInBand`; **hai người chạy `npm test` cùng lúc trên cùng DB sẽ đụng nhau**.
-11. Seed tìm sản phẩm theo `name`; đổi tên trong seed sẽ tạo bản ghi mới thay vì cập nhật.
+| # | Trạng thái | Cách xử lý |
+| :--- | :--- | :--- |
+| 1 | **Đã sửa** | `changeStatus` đọc đơn **trong** transaction, `updateMany` có điều kiện `status = trạng thái cũ`; request thua không hoàn kho. Có test đồng thời cho cả admin và khách |
+| 2 | **Đã sửa** | `cart.addItem` dùng `cartItem.upsert` với `quantity: { increment }` nguyên tử, rollback nếu vượt tồn/kho. Có test 5 request song song |
+| 3 | **Đã bổ sung test** | `category`, `shipping`, `adminOrder`, `productLifecycle` phủ CRUD, filter `from/to/userId`, đổi `categoryId`, xoá sản phẩm đã bán |
+| 4 | **Đã sửa** | 500 trả message chung, không lộ `err.message`/Prisma; body quá lớn trả 413; id/page vượt int4 bị Zod chặn. Có test `errorHandling` |
+| 5 | **Giữ nguyên có chủ ý** | Token sai trên endpoint công khai trả 401 (đúng hành vi xác thực); không token vẫn xem bình thường |
+| 6 | **Đã sửa** | `sendSuccess` tự chuyển toàn bộ Decimal sang number (kể cả trong `detail`) |
+| 7 | **Đã sửa** | `pagination.totalPages` luôn tối thiểu `1` |
+| 8 | **Giữ nguyên** | `POST`/`DELETE` trả 200 theo quy ước response chung của dự án |
+| 9 | **Ngoài phạm vi** | Rate limit / refresh token / khoá tài khoản nằm trong mục 7 của `PLAN.md` |
+| 10 | **Đã sửa** | `scripts/testRunner.js` tạo database test tên duy nhất, migrate, chạy Jest rồi xoá DB. Đã chạy 2 lần `npm test` song song: cả hai 61/61 |
+| 11 | **Đã sửa** | Seed dùng khóa ổn định `slug + thương hiệu`, tự cập nhật sản phẩm cũ; đổi tên trong seed không tạo bản ghi mới |
 
 ---
 

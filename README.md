@@ -40,7 +40,7 @@ Kiểm tra server sống: `GET /api/health`.
 | :--- | :--- |
 | `npm run dev` | Chạy server với nodemon |
 | `npm start` | Chạy server production |
-| `npm test` | Tự tạo database `gear_shop_test` trên CÙNG server DB trong `.env` (URL test ghi vào `.env.test`) rồi chạy Jest |
+| `npm test` | Tự tạo database test **tên duy nhất** trên server DB trong `.env`, chạy migration + Jest, rồi xoá database đó. Hai người/CI chạy song song không đụng nhau |
 | `npm run prisma:migrate` | Tạo migration mới khi sửa schema |
 | `npm run prisma:studio` | Xem dữ liệu bằng Prisma Studio |
 | `npm run prisma:reset` | Xoá và seed lại toàn bộ dữ liệu dev |
@@ -74,6 +74,8 @@ Quy ước response:
 ```
 
 Mọi API cần đăng nhập dùng header `Authorization: Bearer <token>`.
+Giá trị tiền/rating/decimal được trả về dạng **number** (ví dụ `4590000`, `4.8`), không phải string.
+`pagination.totalPages` luôn tối thiểu là `1` kể cả khi không có bản ghi.
 
 ### Auth
 

@@ -3,11 +3,12 @@ const path = require("node:path");
 const dotenv = require("dotenv");
 
 /**
- * Nạp DATABASE_URL của database test do scripts/prepareTestDb.js sinh ra (.env.test).
- * override: true để chắc chắn test không chạy nhầm vào database dev.
+ * Khi chạy `npm test`, scripts/testRunner.js truyền DATABASE_URL trực tiếp.
+ * File .env.test chỉ dùng khi chạy Jest thủ công ngoài testRunner.
  */
 const testEnvPath = path.join(__dirname, "..", ".env.test");
 
-if (fs.existsSync(testEnvPath)) {
+// scripts/testRunner.js truyền DATABASE_URL trực tiếp; chỉ đọc .env.test khi chạy Jest thủ công.
+if (!process.env.DATABASE_URL && fs.existsSync(testEnvPath)) {
   dotenv.config({ path: testEnvPath, override: true });
 }
