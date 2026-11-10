@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { DB_ID_MAX } from "../utils/constants.js";
+import { ID_CODE_PREFIX } from "../utils/constants.js";
+import { idCode } from "./idCode.js";
 
 const name = z
   .string({ required_error: "Tên phương thức là bắt buộc!" })
@@ -29,9 +30,5 @@ export const updateShippingSchema = z.object({
 });
 
 export const shippingIdParamSchema = z.object({
-  id: z.coerce
-    .number()
-    .int("id phải là số nguyên!")
-    .positive("id phải lớn hơn 0!")
-    .max(DB_ID_MAX, "id không hợp lệ!"),
+  id: idCode(ID_CODE_PREFIX.SHIPPING_METHOD, "id"),
 });

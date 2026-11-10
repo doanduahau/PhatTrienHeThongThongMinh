@@ -69,3 +69,12 @@ export const MAX_CART_QUANTITY = 99;
 
 /** Giá trị lớn nhất của cột Int (int4) trong PostgreSQL/Prisma */
 export const DB_ID_MAX = 2147483647;
+
+/**
+ * Prefix khoá chính dạng mã PREFIX-XXXX. Chỉ shipping_methods cần khai báo vì
+ * id của nó được nhận từ client; ratings (DG) và reviews (NX) do CSDL sinh và
+ * không bao giờ nhận từ input.
+ */
+export const ID_CODE_PREFIX = Object.freeze({
+  SHIPPING_METHOD: "VC",
+});

@@ -115,6 +115,28 @@ tới lượt chấm thật đầu tiên (`ratingCount: 0` nghĩa là chưa có 
 Review và rating dùng chung một bảng phiếu `ratings`: POST review tự upsert phiếu sao tương ứng,
 xoá review chỉ xoá phần chữ. Nhờ vậy trung bình luôn tính từ một nguồn duy nhất.
 
+`id` của `ratings` là mã `DG-XXXX`, của `reviews` là `NX-XXXX`, do CSDL sinh (sequence + default),
+client không gửi lên — hai bảng này luôn thao tác qua `:id` sản phẩm + user đang đăng nhập.
+Xem quy ước chung ở `docs/express-backend.md` mục 4.7.
+
+### Quy ước khoá chính của dự án
+
+| Bảng | Khoá chính | Ví dụ |
+| :--- | :--- | :--- |
+| `ratings` | `DG-XXXX` | `DG-0001` |
+| `reviews` | `NX-XXXX` | `NX-0001` |
+| `shipping_methods` | `VC-XXXX` | `VC-0001` |
+| 13 bảng còn lại | `Int` tự tăng | `7` |
+
+Ba bảng trên dùng mã vì id của chúng hiện ra trước người dùng (quản trị vận chuyển, danh sách
+nhận xét) và không có hệ thống nào bên ngoài lưu lại.
+Mười ba bảng còn lại giữ `Int` vì `products`, `orders`, `carts`, `users` và các bảng chi tiết là
+đầu vào của ML: model `.joblib` cùng CSV huấn luyện đã lưu `product_id`/`order_id`/`user_id` dạng số.
+Đổi chúng sang mã sẽ khiến gợi ý và mua kèm rơi về fallback cho tới khi train lại.
+
+Mã do sequence + `DEFAULT` ở PostgreSQL sinh, không sinh trong service. Validator nhận mã dùng
+`idCode()` (`src/validators/idCode.js`), không dùng `z.coerce.number()`.
+
 ### Gợi ý & tìm kiếm thông minh
 
 Các endpoint dưới đây gọi ML service nội bộ (`ML_SERVICE_URL`). Nếu ML tắt/timeout,
@@ -143,7 +165,7 @@ backend tự fallback bằng Prisma và trả `data.source = "fallback"`; API v�
 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/orders` | Đăng nhập | Checkout từ giỏ: `{ shippingMethodId, shippingAddress, shippingPhone, paymentMethod? }` (`cod` mặc định, hoặc `bank_transfer`) |
+| POST | `/api/orders` | Đăng nhập | Checkout từ giỏ: `{ shippingMethodId, shippingAddress, shippingPhone, paymentMethod? }` (`shippingMethodId` dạng `VC-XXXX`; `cod` mặc định, hoặc `bank_transfer`) |
 | GET | `/api/orders` | Đăng nhập | `?page&limit&status` |
 | GET | `/api/orders/:id` | Đăng nhập | Chi tiết đơn của mình (kèm `paymentMethod`, `paymentStatus`) |
 | PATCH | `/api/orders/:id/cancel` | Đăng nhập | Huỷ đơn `pending` |
@@ -152,7 +174,7 @@ backend tự fallback bằng Prisma và trả `data.source = "fallback"`; API v�
 | PATCH | `/api/admin/orders/:id/payment` | Admin | `{ paymentStatus: "paid" \| "unpaid" }` — xác nhận chuyển khoản; đơn đã huỷ trả 400 |
 | GET | `/api/payment-info` | — | `{ methods, bank }` — thông tin chuyển khoản cho client hiển thị |
 | GET | `/api/shipping-methods` | — | Phương thức đang hoạt động (admin thấy cả đã tắt) |
-| POST/PUT/DELETE | `/api/shipping-methods/:id` | Admin | CRUD phí vận chuyển |
+| POST/PUT/DELETE | `/api/shipping-methods/:id` | Admin | CRUD phí vận chuyển; `:id` dạng `VC-XXXX` |
 
 ### Vòng đời đơn hàng
 
@@ -202,6 +224,18 @@ Dùng `url` trả về làm `imageUrl` khi tạo/sửa sản phẩm.
 | GET | `/api/admin/stats/top-products` | Admin | `?limit` — bán chạy theo số lượng (bỏ đơn huỷ) |
 | GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` — sản phẩm sắp hết hàng |
 
+Kỳ doanh thu được cắt theo múi giờ `APP_TIME_ZONE` (mặc định `Asia/Ho_Chi_Minh`).
+Mỗi phần tử trả về hai trường: `period` dạng ISO (`2026-11-07` hoặc `2026-11`) để client
+sắp xếp/lọc, và `periodLabel` dạng `DD/MM/YYYY` (`07/11/2026`) hoặc `MM/YYYY` (`11/2026`)
+để hiển thị.
+
+### Quy ước ngày tháng
+
+- CSDL lưu UTC; các trường `createdAt`/`updatedAt` trong response giữ nguyên ISO 8601.
+- Ngày hiển thị cho người dùng luôn là `DD/MM/YYYY`, dùng helper trong `src/utils/date.js`
+  (`formatDate`, `formatMonthYear`, `formatIsoDate`). Không tự nối chuỗi ngày bằng `-`.
+- Múi giờ hiển thị cấu hình qua `APP_TIME_ZONE`, không phụ thuộc múi giờ máy chủ.
+
 ### Biến môi trường bổ sung
 
 Ngoài các biến cũ (xem `.env.example`), các tính năng mới cần:
@@ -211,6 +245,7 @@ Ngoài các biến cũ (xem `.env.example`), các tính năng mới cần:
 | Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `APP_URL` | Thiếu `SMTP_HOST` → mail in ra console (test local được ngay) |
 | Storage | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Thiếu → upload trả 503 |
 | Ngân hàng | `BANK_NAME`, `BANK_ACCOUNT`, `BANK_HOLDER` | Hiển thị qua `/api/payment-info` |
+| Múi giờ | `APP_TIME_ZONE` | Mặc định `Asia/Ho_Chi_Minh`; ảnh hưởng định dạng ngày và gom nhóm doanh thu |
 
 ## 6. Tích hợp ML service
 

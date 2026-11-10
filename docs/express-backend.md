@@ -306,6 +306,133 @@ export const deleteSinhVien = (maSV) => {
 
 ---
 
+### 4.7. Khoá chính: `Int` tự tăng hay mã `PREFIX-XXXX`
+
+Đây là quyết định kiến trúc, không phải chi tiết thẩm mỹ. Đổi khoá chính về sau là **breaking change**
+và phải migration dữ liệu, nên chọn đúng ngay từ đầu.
+
+| Tiêu chí | `Int @default(autoincrement())` | Mã `PREFIX-XXXX` |
+| :--- | :--- | :--- |
+| Người dùng đọc/gõ lại được | Không (id `7` không nói lên gì) | Có (`SP-0007`) |
+| Lộ số lượng bản ghi | Có (`SP-0009` → biết chỉ có 9) | Che được nếu không đệm tuần tự |
+| Khoá ngoại & join | Nhẹ nhất, index nhỏ | Nặng hơn, vẫn ổn nếu `VarChar(20)` |
+| Sắp xếp mặc định theo id | Đúng thứ tự chèn | Chỉ đúng khi đệm 0 (xem bẫy bên dưới) |
+| Hệ thống ngoài đang lưu id dạng số | Không phải sửa | Phải cập nhật mọi nơi (job ETL, model, đối tác) |
+| Client/API đang dùng id | Không phải sửa | Breaking change, client phải đổi |
+
+**Quy tắc chọn:**
+
+- **Dùng `Int` tự tăng** cho bảng nội bộ, khoá ngoại xuất hiện dày đặc, hoặc khi id đã được hệ thống
+  khác lưu lại dưới dạng số (pipeline dữ liệu, model đã train, báo cáo, đối tác). Đổi những bảng này
+  thường lợi ít mà hại nhiều.
+- **Dùng mã** khi id xuất hiện trước mắt người dùng: số hoá đơn, mã sản phẩm, mã vận đơn, URL chia sẻ.
+- **Không đổi hàng loạt chỉ để "cho đồng bộ"**. Mỗi bảng là một quyết định riêng.
+- **Phương án trung dung:** giữ `Int` làm khoá chính, thêm cột `code String @unique` cho hiển thị và
+  tra cứu. Được mã đẹp cho người dùng mà **không** phá khoá ngoại, không phải migration remap. Chọn
+  cách này trước khi cân nhắc đổi hẳn khoá chính.
+
+#### Định dạng
+
+`PREFIX-XXXX`: prefix 2–4 chữ in hoa (duy nhất theo bảng) + dấu gạch ngang + số đệm tối thiểu 4 chữ số.
+Ví dụ `SP-0001`, `DH-0032`, `VC-0007`. Đệm 0 để `ORDER BY id` vẫn đúng thứ tự (xem bẫy bên dưới).
+
+#### Sinh mã ở tầng CSDL, không sinh bằng `count()`
+
+Không dùng `count() + 1` hay `MAX(id) + 1` trong service: hai request đồng thời sẽ nhận cùng một mã.
+Cũng không tự sinh `randomUUID()` rồi cắt ngắn — dễ trùng và mất thứ tự. Với PostgreSQL, dùng
+sequence + `DEFAULT` để CSDL cấp mã nguyên tử:
+
+```sql
+-- Hàm dùng chung: nextval() gọi đúng 1 lần, GREATEST giữ mã dài ra thay vì bị cắt ở 9999.
+CREATE FUNCTION next_code(seq regclass, prefix text) RETURNS text
+LANGUAGE sql VOLATILE AS $$
+    SELECT prefix || lpad(v::text, GREATEST(4, length(v::text)), '0')
+    FROM nextval(seq) AS v
+$$;
+
+CREATE SEQUENCE products_code_seq;
+ALTER TABLE products ALTER COLUMN id
+    SET DEFAULT next_code('products_code_seq', 'SP-');
+```
+
+Trong Prisma, biểu diễn bằng `dbgenerated` để client **không** gửi `id` khi `create()` và đọc lại
+giá trị DB vừa sinh:
+
+```prisma
+model Product {
+  id String @id
+     @default(dbgenerated("next_code('products_code_seq', 'SP-')"))
+     @db.VarChar(20)
+  // ...
+}
+```
+
+Service nhờ vậy không phải đổi gì: `prisma.product.create({ data })` trả về object có `id` là `SP-0007`.
+
+> **Bẫy đệm số:** `lpad(id::text, 4, '0')` **cắt** số khi vượt 9999 (`10000` → `1000`), và
+> `to_char(10000, 'FM0000')` trả `####`. Luôn dùng `GREATEST(4, length(...))` như hàm trên.
+
+> **Bẫy sắp xếp:** mã không đệm 0 thì `ORDER BY id` sắp theo chuỗi: `SP-10` đứng trước `SP-2`.
+> Nếu API có phân trang/sắp xếp theo id, hãy đệm 0 hoặc sắp xếp theo `created_at`.
+
+#### Khoá ngoại phải cùng kiểu
+
+Bảng nào trỏ tới bảng dùng mã thì cột khoá ngoại cũng phải `String @db.VarChar(20)`, nếu không
+PostgreSQL sẽ từ chối tạo ràng buộc. Đừng quên cập nhật cả cột này trong migration:
+
+```prisma
+model Order {
+  shippingMethodId String @map("shipping_method_id") @db.VarChar(20)
+  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
+}
+```
+
+#### Validate mã ở tầng Zod
+
+Mã là chuỗi, nên **không** dùng `z.coerce.number()`. Gom về một helper để mọi validator dùng chung
+định dạng và thông báo lỗi:
+
+```javascript
+// src/validators/idCode.js
+import { z } from "zod";
+
+export const idCode = (prefix, label) =>
+  z
+    .string({
+      required_error: `${label} là bắt buộc!`,
+      invalid_type_error: `${label} không hợp lệ (định dạng ${prefix}-XXXX)!`,
+    })
+    .trim()
+    .regex(new RegExp(`^${prefix}-\\d{4,}$`), `${label} không hợp lệ (định dạng ${prefix}-XXXX)!`);
+```
+
+```javascript
+// src/validators/product.validator.js
+import { idCode } from "./idCode.js";
+
+export const productIdParamSchema = z.object({ id: idCode("SP", "id") });
+```
+
+`invalid_type_error` rất đáng làm: client cũ còn gửi `1` thay vì `"SP-0001"` sẽ nhận thông báo đúng
+định dạng thay vì câu lỗi thô "Expected string, received number".
+
+#### Quy trình đổi một bảng đã có dữ liệu
+
+1. Xác nhận không còn hệ thống ngoài nào lưu id dạng số (nếu còn, dừng lại hoặc dùng phương án thêm cột `code`).
+2. Viết migration theo thứ tự: `CREATE SEQUENCE` → `ALTER COLUMN ... DROP DEFAULT` →
+   `ALTER COLUMN ... TYPE VARCHAR(20) USING` (remap dữ liệu cũ theo công thức tất định) →
+   `SET DEFAULT next_code(...)` → `DROP SEQUENCE` cũ → cập nhật khoá ngoại liên quan.
+3. Remap khoá ngoại bằng **cùng công thức** với khoá chính để không cần JOIN khi migrate:
+   `USING ('VC-' || lpad(shipping_method_id::text, GREATEST(4, length(shipping_method_id::text)), '0'))`.
+4. Đổi `schema.prisma` sang `String @id @default(dbgenerated(...)) @db.VarChar(20)`.
+5. Chạy `npx prisma generate`, rồi kiểm thử: `create()` trả đúng mã, `findUnique` theo mã, khoá ngoại
+   chặn mã không tồn tại (`P2003`).
+6. Chạy migration trên DB thật **sau khi backup** các bảng bị ảnh hưởng.
+
+> **Đừng quên:** API đổi kiểu id là breaking change. Ghi rõ trong README và thông báo cho phía client.
+
+---
+
 ## 5. Những "Cái Bẫy" Over-Engineering cần tránh (Anti-Patterns)
 
 | Sai lầm (Anti-Pattern) | Hậu quả | Cách viết chuẩn |
@@ -327,3 +454,6 @@ export const deleteSinhVien = (maSV) => {
 - [ ] **Xử lý 404**: Có middleware cuối cùng bắt các đường dẫn không tồn tại.
 - [ ] **Không lộ chi tiết lỗi Server**: Với lỗi 500 ngoài ý muốn, chỉ in log ra server console, không gửi stack trace nhạy cảm về client.
 - [ ] **File `.env.example`**: Luôn có file mẫu đi kèm để người khác clone repo về có thể chạy ngay.
+- [ ] **Khoá chính**: đã chọn đúng `Int` tự tăng hay mã `PREFIX-XXXX` cho từng bảng; bảng dùng mã có
+      sequence + `dbgenerated`, khoá ngoại cùng kiểu, và validator dùng `idCode()` thay vì
+      `z.coerce.number()` (xem mục 4.7).

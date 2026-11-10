@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../clients/prisma.client.js";
+import { env } from "../config/env.js";
 import { ORDER_STATUS, PAYMENT_STATUS } from "../utils/constants.js";
+import { formatDate, formatIsoDate, formatMonthYear } from "../utils/date.js";
 import { toNumber } from "../utils/money.js";
 
 export const getOverview = async () => {
@@ -36,8 +38,13 @@ export const getRevenue = async ({ groupBy, from, to }) => {
   if (from) conditions.push(Prisma.sql`created_at >= ${new Date(from)}`);
   if (to) conditions.push(Prisma.sql`created_at <= ${new Date(to)}`);
 
+  // created_at là TIMESTAMP không múi giờ chứa UTC: đổi sang giờ địa phương trước
+  // khi cắt kỳ, rồi đổi về timestamptz để driver trả về đúng một mốc tuyệt đối.
+  const localPeriod = Prisma.sql`date_trunc(${groupBy}, created_at AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimeZone}) AT TIME ZONE ${env.appTimeZone}`;
+  const byMonth = groupBy === "month";
+
   const rows = await prisma.$queryRaw`
-    SELECT date_trunc(${groupBy}, created_at) AS period,
+    SELECT ${localPeriod} AS period,
            COUNT(*)::int AS "orderCount",
            COALESCE(SUM(total_amount), 0)::float8 AS revenue
     FROM orders
@@ -49,7 +56,8 @@ export const getRevenue = async ({ groupBy, from, to }) => {
   return {
     groupBy,
     items: rows.map((row) => ({
-      period: row.period.toISOString().slice(0, groupBy === "month" ? 7 : 10),
+      period: byMonth ? formatIsoDate(row.period).slice(0, 7) : formatIsoDate(row.period),
+      periodLabel: byMonth ? formatMonthYear(row.period) : formatDate(row.period),
       orderCount: row.orderCount,
       revenue: row.revenue,
     })),

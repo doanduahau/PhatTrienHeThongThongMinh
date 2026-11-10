@@ -26,9 +26,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT now()
 );
 
+-- Hàm sinh mã khoá chính dạng PREFIX-XXXX (đệm tối thiểu 4 số, không cắt khi vượt 9999).
+-- Chỉ dùng cho các bảng KHÔNG phải đầu vào thuật toán ML.
+CREATE OR REPLACE FUNCTION next_code(seq regclass, prefix text) RETURNS text
+LANGUAGE sql VOLATILE AS $$
+    SELECT prefix || lpad(v::text, GREATEST(4, length(v::text)), '0')
+    FROM nextval(seq) AS v
+$$;
+
 -- 3. BẢNG PHƯƠNG THỨC VẬN CHUYỂN (SHIPPING_METHODS)
+CREATE SEQUENCE IF NOT EXISTS shipping_methods_code_seq;
 CREATE TABLE IF NOT EXISTS shipping_methods (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(20) PRIMARY KEY DEFAULT next_code('shipping_methods_code_seq', 'VC-'),
     name VARCHAR(100) NOT NULL,
     fee NUMERIC NOT NULL DEFAULT 0,
     estimated_days VARCHAR(50),
@@ -130,7 +139,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    shipping_method_id INTEGER NOT NULL REFERENCES shipping_methods(id),
+    shipping_method_id VARCHAR(20) NOT NULL REFERENCES shipping_methods(id),
     total_amount NUMERIC NOT NULL DEFAULT 0,
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
     shipping_address TEXT NOT NULL,
