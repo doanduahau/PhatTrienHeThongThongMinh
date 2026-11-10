@@ -12,6 +12,9 @@ export const env = {
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS || 10),
   databaseUrl: process.env.DATABASE_URL,
 
+  // Múi giờ để hiển thị và gom nhóm thống kê. CSDL vẫn lưu UTC.
+  appTimeZone: process.env.APP_TIME_ZONE || "Asia/Ho_Chi_Minh",
+
   // ML service chạy nội bộ bằng uvicorn (xem ../ml-service/README.md)
   mlServiceUrl: process.env.ML_SERVICE_URL || "http://127.0.0.1:8000",
   mlTimeoutMs: Number(process.env.ML_TIMEOUT_MS || 1200),

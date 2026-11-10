@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { DB_ID_MAX, ORDER_STATUS_VALUES, PAGINATION, PAYMENT_METHOD, PAYMENT_STATUS } from "../utils/constants.js";
+import {
+  DB_ID_MAX,
+  ID_CODE_PREFIX,
+  ORDER_STATUS_VALUES,
+  PAGINATION,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
+} from "../utils/constants.js";
+import { idCode } from "./idCode.js";
 
 export const createOrderSchema = z.object({
-  shippingMethodId: z.coerce
-    .number({ required_error: "shippingMethodId là bắt buộc!" })
-    .int("shippingMethodId phải là số nguyên!")
-    .positive("shippingMethodId phải lớn hơn 0!")
-    .max(DB_ID_MAX, "shippingMethodId không hợp lệ!"),
+  shippingMethodId: idCode(ID_CODE_PREFIX.SHIPPING_METHOD, "shippingMethodId"),
   shippingAddress: z
     .string({ required_error: "Địa chỉ giao hàng là bắt buộc!" })
     .trim()
