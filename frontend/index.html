@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gear Shop — chuột, bàn phím, tai nghe cho góc máy chơi game</title>
+    <meta
+      name="description"
+      content="Chuột, bàn phím, tai nghe, ghế và lót chuột cho góc máy chơi game. Thông số chi tiết, tìm kiếm bằng câu mô tả."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Tới nội dung chính</a>
+
+    <header class="site-header" data-site-header></header>
+
+    <main id="main">
+      <h1 class="visually-hidden">Gear Shop — chuột, bàn phím, tai nghe cho góc máy chơi game</h1>
+
+      <section class="hero" aria-label="Sản phẩm nổi bật">
+        <div class="container">
+          <div class="hero__shell" data-hero>
+            <div class="hero__slides" data-hero-slides>
+              <article class="hero-slide is-active">
+                <div class="hero-slide__copy">
+                  <p class="hero-slide__eyebrow">Gear chính hãng</p>
+                  <h2 class="hero-slide__title">Gear gọn, chuẩn gu cho góc máy chơi game.</h2>
+                  <p class="hero-slide__lead">
+                    Chuột, bàn phím, tai nghe và ghế được chọn theo thông số thật, bảo hành rõ ràng.
+                  </p>
+                  <div class="hero-slide__actions">
+                    <a class="btn btn--primary" href="san-pham.html">Xem sản phẩm</a>
+                    <a class="btn btn--ghost" href="#tim-kiem">Tư vấn nhanh</a>
+                  </div>
+                </div>
+                <div class="hero-slide__visual" aria-hidden="true">
+                  <span class="hero-slide__glow"></span>
+                  <span class="hero-slide__icon">
+                    <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="7" y="7" width="10" height="10" rx="2" />
+                      <rect x="23" y="7" width="10" height="10" rx="2" />
+                      <rect x="7" y="23" width="10" height="10" rx="2" />
+                      <rect x="23" y="23" width="10" height="10" rx="2" />
+                    </svg>
+                  </span>
+                  <span class="hero-slide__ring hero-slide__ring--one"></span>
+                  <span class="hero-slide__ring hero-slide__ring--two"></span>
+                </div>
+              </article>
+            </div>
+            <div class="hero__controls">
+              <button class="hero__arrow" type="button" data-hero-prev aria-label="Slide trước">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <button class="hero__arrow" type="button" data-hero-next aria-label="Slide sau">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+              <div class="hero__dots" data-hero-dots role="tablist" aria-label="Chọn slide"></div>
+              <button class="hero__pause" type="button" data-hero-pause aria-label="Tạm dừng tự động chuyển slide" aria-pressed="false">
+                <svg class="hero__pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                  <path d="M9 5v14M15 5v14" />
+                </svg>
+                <svg class="hero__play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="m8 5 11 7-11 7V5Z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="category-heading">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <p class="eyebrow">Chọn theo nhu cầu</p>
+              <h2 class="section__title" id="category-heading">Danh mục gear</h2>
+            </div>
+            <a class="section__link" href="san-pham.html">Xem tất cả <span aria-hidden="true">→</span></a>
+          </div>
+          <ul class="category-grid" data-categories></ul>
+        </div>
+      </section>
+
+      <section class="section section--muted" aria-labelledby="featured-heading">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <p class="eyebrow">Được chọn nhiều</p>
+              <h2 class="section__title" id="featured-heading">Gear bán chạy</h2>
+            </div>
+            <a class="section__link" href="san-pham.html">Xem tất cả sản phẩm <span aria-hidden="true">→</span></a>
+          </div>
+          <ul class="product-grid" data-featured></ul>
+        </div>
+      </section>
+
+      <section class="search-band" id="tim-kiem" aria-labelledby="tim-kiem-heading">
+        <div class="container search-band__inner">
+          <div class="search-band__copy">
+            <p class="eyebrow eyebrow--light">Tư vấn thông minh</p>
+            <h2 id="tim-kiem-heading">Chưa biết chọn gì? Mô tả thứ bạn cần.</h2>
+            <p>
+              Nói theo cách của bạn: ngân sách, kiểu kết nối, layout bàn phím hay trọng lượng chuột.
+            </p>
+          </div>
+          <form class="search-band__form" data-smart-form>
+            <div class="search-band__field">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m16.5 16.5 4 4" />
+              </svg>
+              <label class="visually-hidden" for="smart-query">Câu mô tả</label>
+              <input
+                id="smart-query"
+                name="q"
+                type="search"
+                placeholder="chuột không dây dưới 2 triệu"
+                autocomplete="off"
+                required
+              />
+            </div>
+            <button class="btn btn--primary" type="submit">Tìm sản phẩm</button>
+          </form>
+          <div class="search-band__tags" aria-label="Gợi ý tìm kiếm">
+            <button class="search-band__tag" type="button" data-smart-tag="chuột không dây dưới 2 triệu">Chuột không dây dưới 2 triệu</button>
+            <button class="search-band__tag" type="button" data-smart-tag="bàn phím 75% có rapid trigger">Bàn phím 75% rapid trigger</button>
+            <button class="search-band__tag" type="button" data-smart-tag="tai nghe chống ồn dưới 3 triệu">Tai nghe chống ồn</button>
+            <button class="search-band__tag" type="button" data-smart-tag="ghế công thái học lưng lưới">Ghế lưng lưới</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight" aria-label="Cam kết dịch vụ">
+        <div class="container trust-grid">
+          <article class="trust-item">
+            <span class="trust-item__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </span>
+            <div>
+              <h3>Hàng chính hãng</h3>
+              <p>Bảo hành theo hãng, tem niêm phong đầy đủ.</p>
+            </div>
+          </article>
+          <article class="trust-item">
+            <span class="trust-item__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z" />
+                <circle cx="7" cy="18" r="2" />
+                <circle cx="18" cy="18" r="2" />
+              </svg>
+            </span>
+            <div>
+              <h3>Giao nhanh 0–3 ngày</h3>
+              <p>Miễn phí ship từ 1 triệu trong nội thành.</p>
+            </div>
+          </article>
+          <article class="trust-item">
+            <span class="trust-item__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5" />
+              </svg>
+            </span>
+            <div>
+              <h3>Đổi trả 7 ngày</h3>
+              <p>Đổi mới nếu lỗi kỹ thuật, hỗ trợ tận tình.</p>
+            </div>
+          </article>
+          <article class="trust-item">
+            <span class="trust-item__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 13a8 8 0 0 1 16 0v3a3 3 0 0 1-3 3h-2" />
+                <path d="M4 13v3a3 3 0 0 0 3 3h1" />
+                <path d="M4 13h3v5H6a2 2 0 0 1-2-2v-3ZM20 13h-3v5h1a2 2 0 0 0 2-2v-3Z" />
+              </svg>
+            </span>
+            <div>
+              <h3>Tư vấn thật</h3>
+              <p>Chọn theo nhu cầu, không chạy theo doanh số.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="showroom-heading">
+        <div class="container showroom">
+          <div class="showroom__visual" aria-hidden="true">
+            <div class="showroom__map"></div>
+            <span class="showroom__pin">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+            </span>
+            <div class="showroom__badge">
+              <strong>Gear Shop Showroom</strong>
+              <span>89 Hồ Văn Huê, Phú Nhuận, TP.HCM</span>
+            </div>
+          </div>
+          <div class="showroom__copy">
+            <p class="eyebrow">Trải nghiệm trước khi mua</p>
+            <h2 id="showroom-heading">Ghé showroom để thử đúng cảm giác.</h2>
+            <p>
+              Cầm thử chuột, gõ thử switch, ngồi thử ghế và nghe thử tai nghe. Đội ngũ tư vấn sẽ giúp bạn
+              chọn cấu hình phù hợp với cách chơi và không gian của mình.
+            </p>
+            <ul class="check-list">
+              <li>Trải nghiệm hơn 100 mẫu gear đang bày</li>
+              <li>Đo và tư vấn setup theo bàn làm việc</li>
+              <li>Hỗ trợ cài đặt, kiểm tra máy tại chỗ</li>
+            </ul>
+            <a class="btn btn--dark" href="san-pham.html">Xem sản phẩm trước</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--muted" aria-labelledby="review-heading">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <p class="eyebrow">Khách đã mua</p>
+              <h2 class="section__title" id="review-heading">Nói thật về Gear Shop</h2>
+            </div>
+            <span class="review-summary">4.9/5 từ 1.200+ đánh giá</span>
+          </div>
+          <div class="review-grid">
+            <article class="review-card">
+              <p class="review-card__stars" aria-label="5 trên 5 sao">★★★★★</p>
+              <p class="review-card__quote">
+                “Mình mua chuột không dây, được tư vấn theo đúng cỡ tay. Giao trong ngày, đóng gói rất kỹ.”
+              </p>
+              <div class="review-card__author">
+                <span class="review-card__avatar" aria-hidden="true">MH</span>
+                <div>
+                  <p class="review-card__name">Minh Hoàng</p>
+                  <p class="review-card__meta">Chuột không dây · TP.HCM</p>
+                </div>
+              </div>
+            </article>
+            <article class="review-card">
+              <p class="review-card__stars" aria-label="5 trên 5 sao">★★★★★</p>
+              <p class="review-card__quote">
+                “Bàn phím 75% đúng layout mình cần, switch gõ êm. Bảo hành được hướng dẫn rõ ràng.”
+              </p>
+              <div class="review-card__author">
+                <span class="review-card__avatar" aria-hidden="true">TN</span>
+                <div>
+                  <p class="review-card__name">Thanh Ngân</p>
+                  <p class="review-card__meta">Bàn phím cơ · Hà Nội</p>
+                </div>
+              </div>
+            </article>
+            <article class="review-card">
+              <p class="review-card__stars" aria-label="5 trên 5 sao">★★★★★</p>
+              <p class="review-card__quote">
+                “Ghé showroom thử ghế rồi mới mua. Nhân viên kiên nhẫn, không hối thúc. Rất đáng tiền.”
+              </p>
+              <div class="review-card__author">
+                <span class="review-card__avatar" aria-hidden="true">QA</span>
+                <div>
+                  <p class="review-card__name">Quốc Anh</p>
+                  <p class="review-card__meta">Ghế công thái học · Đà Nẵng</p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="blog-heading">
+        <div class="container">
+          <div class="section__head">
+            <div>
+              <p class="eyebrow">Góc tư vấn</p>
+              <h2 class="section__title" id="blog-heading">Chọn gear dễ hơn</h2>
+            </div>
+            <a class="section__link" href="san-pham.html">Khám phá sản phẩm <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="blog-grid">
+            <article class="blog-card">
+              <div class="blog-card__media blog-card__media--one" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="12" y="5" width="16" height="30" rx="8" />
+                  <path d="M20 5v12M12 17h16" />
+                </svg>
+                <span class="blog-card__tag">Chuột</span>
+              </div>
+              <div class="blog-card__body">
+                <p class="blog-card__date">12.11.2026</p>
+                <h3 class="blog-card__title">Chuột nào hợp cỡ tay và kiểu cầm của bạn?</h3>
+                <p class="blog-card__excerpt">Cách chọn chiều dài, chiều rộng và trọng lượng chuột theo thói quen chơi.</p>
+              </div>
+            </article>
+            <article class="blog-card">
+              <div class="blog-card__media blog-card__media--two" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="12" width="32" height="17" rx="3" />
+                  <path d="M8 17h2M13 17h2M18 17h2M23 17h2M28 17h4M8 21h2M13 21h2M18 21h2M23 21h2M28 21h4M8 25h6M17 25h6M26 25h6" />
+                </svg>
+                <span class="blog-card__tag">Bàn phím</span>
+              </div>
+              <div class="blog-card__body">
+                <p class="blog-card__date">08.11.2026</p>
+                <h3 class="blog-card__title">Rapid trigger là gì và có đáng nâng cấp?</h3>
+                <p class="blog-card__excerpt">Giải thích dễ hiểu về hành trình phím, điểm nhấn và lợi ích khi chơi game.</p>
+              </div>
+            </article>
+            <article class="blog-card">
+              <div class="blog-card__media blog-card__media--three" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 5h12v14H14zM10 21h20v4H10zM20 25v8M14 33h12" />
+                </svg>
+                <span class="blog-card__tag">Công thái học</span>
+              </div>
+              <div class="blog-card__body">
+                <p class="blog-card__date">03.11.2026</p>
+                <h3 class="blog-card__title">Tư thế ngồi chuẩn cho người chơi lâu</h3>
+                <p class="blog-card__excerpt">Điều chỉnh độ cao ghế, lưng tựa và màn hình để giảm mỏi cổ vai gáy.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" data-site-footer></footer>
+
+    <script type="module" src="assets/js/home.js"></script>
+  </body>
+</html>

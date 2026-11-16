@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Giỏ hàng — Gear Shop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Tới nội dung chính</a>
+
+    <header class="site-header" data-site-header></header>
+
+    <main id="main">
+      <section class="page-hero">
+        <div class="container">
+          <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="index.html">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Giỏ hàng</span>
+          </nav>
+          <h1 class="page-title">Giỏ hàng</h1>
+          <p class="page-lead">Kiểm tra lại gear trước khi đặt hàng. Giỏ của khách sẽ được đồng bộ khi đăng nhập.</p>
+        </div>
+      </section>
+
+      <div class="container cart-page">
+        <div class="cart-layout">
+          <section aria-labelledby="cart-heading">
+            <div class="cart-head">
+              <h2 class="section__title" id="cart-heading">Giỏ của bạn</h2>
+              <p class="result-count" data-cart-message role="status" aria-live="polite"></p>
+            </div>
+            <div data-cart-items></div>
+          </section>
+
+          <section class="summary" aria-labelledby="summary-heading">
+            <h2 class="summary__heading" id="summary-heading">Thanh toán</h2>
+
+            <p class="summary__row">
+              <span>Tạm tính</span>
+              <span data-subtotal>0đ</span>
+            </p>
+            <p class="summary__row" data-shipping-row hidden>
+              <span>Phí vận chuyển</span>
+              <span data-shipping-fee>0đ</span>
+            </p>
+            <p class="summary__total">
+              <span>Tổng cộng</span>
+              <span data-total>0đ</span>
+            </p>
+
+            <form class="form" data-checkout hidden>
+              <div class="field">
+                <label for="shippingMethod">Phương thức vận chuyển</label>
+                <select id="shippingMethod" name="shippingMethodId" required></select>
+              </div>
+              <div class="field">
+                <label for="shippingAddress">Địa chỉ giao hàng</label>
+                <input id="shippingAddress" name="shippingAddress" type="text" required minlength="5" maxlength="255" />
+              </div>
+              <div class="field">
+                <label for="shippingPhone">Số điện thoại</label>
+                <input id="shippingPhone" name="shippingPhone" type="tel" required pattern="[0-9+\s.\-]{8,20}" />
+              </div>
+              <button class="btn btn--primary btn--large" type="submit">Đặt hàng</button>
+              <p class="form-error" data-checkout-error role="alert" hidden></p>
+            </form>
+
+            <p class="field__hint cart-note" data-guest-note hidden>
+              Giỏ đang lưu trên trình duyệt này.
+              <a class="link-quiet" href="dang-nhap.html?next=gio-hang.html">Đăng nhập</a>
+              để đặt hàng.
+            </p>
+
+            <div class="summary__perks">
+              <span>Thanh toán khi nhận hàng</span>
+              <span>Kiểm tra hàng trước khi nhận</span>
+              <span>Hỗ trợ đổi trả 7 ngày</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer" data-site-footer></footer>
+
+    <script type="module" src="assets/js/cart.js"></script>
+  </body>
+</html>

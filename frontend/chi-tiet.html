@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chi tiết sản phẩm — Gear Shop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Tới nội dung chính</a>
+
+    <header class="site-header" data-site-header></header>
+
+    <main id="main">
+      <div class="container detail-page">
+        <nav class="breadcrumb" aria-label="Đường dẫn">
+          <a href="index.html">Trang chủ</a>
+          <span aria-hidden="true">/</span>
+          <a href="san-pham.html">Sản phẩm</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">Chi tiết</span>
+        </nav>
+
+        <section class="detail" data-detail hidden aria-labelledby="product-name">
+          <div class="detail__media" data-media></div>
+
+          <div class="detail__info">
+            <div class="detail__badges">
+              <p class="detail__brand" data-brand></p>
+              <span class="detail__category" data-category></span>
+            </div>
+
+            <h1 class="detail__title" id="product-name" data-name></h1>
+            <div class="detail__rating" data-rating></div>
+            <p class="detail__price" data-price></p>
+            <p class="detail__color" data-color hidden></p>
+            <p class="detail__stock" data-stock></p>
+
+            <div class="detail__buy">
+              <div class="field detail__quantity">
+                <label for="quantity">Số lượng</label>
+                <input id="quantity" data-quantity type="number" min="1" max="99" value="1" />
+              </div>
+              <button class="btn btn--primary btn--large" type="button" data-add>Thêm vào giỏ</button>
+            </div>
+
+            <div class="detail__perks">
+              <p class="detail__perk">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                Bảo hành chính hãng, tem niêm phong đầy đủ
+              </p>
+              <p class="detail__perk">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z" />
+                  <circle cx="7" cy="18" r="2" />
+                  <circle cx="18" cy="18" r="2" />
+                </svg>
+                Giao nhanh 0–3 ngày, miễn phí ship từ 1 triệu
+              </p>
+              <p class="detail__perk">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5" />
+                </svg>
+                Đổi trả 7 ngày nếu lỗi kỹ thuật
+              </p>
+            </div>
+
+            <div class="specs" data-specs hidden>
+              <h2>Thông số</h2>
+              <table class="spec-table">
+                <caption class="visually-hidden">Thông số kỹ thuật</caption>
+                <tbody data-spec-rows></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <p class="empty" data-error role="alert" hidden></p>
+      </div>
+
+      <section class="container section" data-similar-section hidden aria-labelledby="similar-heading">
+        <div class="section__head">
+          <div>
+            <p class="eyebrow">Có thể bạn thích</p>
+            <h2 class="section__title" id="similar-heading">Sản phẩm tương tự</h2>
+          </div>
+        </div>
+        <ul class="product-grid" data-similar></ul>
+      </section>
+    </main>
+
+    <footer class="site-footer" data-site-footer></footer>
+
+    <script type="module" src="assets/js/product.js"></script>
+  </body>
+</html>

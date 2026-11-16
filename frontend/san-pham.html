@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sản phẩm — Gear Shop</title>
+    <meta name="description" content="Danh sách chuột, bàn phím, tai nghe, ghế và lót chuột cho góc máy chơi game." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Tới nội dung chính</a>
+
+    <header class="site-header" data-site-header></header>
+
+    <main id="main">
+      <section class="page-hero">
+        <div class="container">
+          <nav class="breadcrumb" aria-label="Đường dẫn">
+            <a href="index.html">Trang chủ</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Sản phẩm</span>
+          </nav>
+          <h1 class="page-title">Sản phẩm</h1>
+          <p class="page-lead">
+            Lọc theo danh mục, thương hiệu hoặc mô tả bằng câu. Mọi thông số đều được ghi rõ để bạn chọn đúng ngay từ đầu.
+          </p>
+        </div>
+      </section>
+
+      <section class="container catalog-page" aria-label="Danh sách sản phẩm">
+        <div class="catalog-layout">
+          <aside class="filter-panel">
+            <div class="filter-panel__head">
+              <h2>Bộ lọc</h2>
+              <a class="link-quiet" href="san-pham.html">Đặt lại</a>
+            </div>
+
+            <ul class="cat-filter" data-category-filter></ul>
+
+            <form class="filters" data-filters>
+              <div class="field">
+                <label for="filter-q">Tìm theo tên, hãng hoặc câu mô tả</label>
+                <input id="filter-q" name="q" type="search" autocomplete="off" placeholder="Ví dụ: chuột không dây" />
+              </div>
+
+              <div class="field">
+                <label for="filter-brand">Thương hiệu</label>
+                <select id="filter-brand" name="brandId">
+                  <option value="">Tất cả</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="filter-sort">Sắp xếp</label>
+                <select id="filter-sort" name="sort">
+                  <option value="newest">Mới nhất</option>
+                  <option value="price_asc">Giá tăng dần</option>
+                  <option value="price_desc">Giá giảm dần</option>
+                  <option value="name_asc">Tên A-Z</option>
+                  <option value="rating_desc">Đánh giá cao</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="filter-smart">Cách tìm</label>
+                <select id="filter-smart" name="smart">
+                  <option value="0">Theo tên và hãng</option>
+                  <option value="1">Hiểu câu mô tả</option>
+                </select>
+              </div>
+
+              <button class="btn btn--primary" type="submit">Lọc sản phẩm</button>
+            </form>
+          </aside>
+
+          <div class="catalog-results">
+            <p class="result-count" data-result-count role="status" aria-live="polite"></p>
+            <p class="analysis" data-analysis aria-live="polite" hidden></p>
+            <ul class="product-grid product-grid--wide" data-products></ul>
+            <div class="pagination" data-pagination></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" data-site-footer></footer>
+
+    <script type="module" src="assets/js/catalog.js"></script>
+  </body>
+</html>

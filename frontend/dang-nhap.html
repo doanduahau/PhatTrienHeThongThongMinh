@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng nhập — Gear Shop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Tới nội dung chính</a>
+
+    <header class="site-header" data-site-header></header>
+
+    <main id="main">
+      <section class="container auth-page">
+        <div class="auth-shell">
+          <aside class="auth-brand">
+            <a class="wordmark" href="index.html" aria-label="Gear Shop — về trang chủ">
+              <span class="wordmark__mark" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none">
+                  <circle cx="20" cy="20" r="17.5" stroke="currentColor" stroke-width="2" />
+                  <path d="M26 14.5A8 8 0 1 0 26 25.5V20h-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="31" cy="9" r="2.5" fill="var(--accent)" />
+                </svg>
+              </span>
+              <span class="wordmark__text">Gear Shop</span>
+            </a>
+
+            <div class="auth-brand__body">
+              <p class="eyebrow eyebrow--light">Tài khoản Gear Shop</p>
+              <h2>Một tài khoản cho mọi đơn gear.</h2>
+              <p>Theo dõi đơn hàng, lưu địa chỉ giao hàng và đồng bộ giỏ giữa các thiết bị.</p>
+              <ul class="auth-brand__list">
+                <li>Đặt hàng nhanh với địa chỉ đã lưu</li>
+                <li>Theo dõi trạng thái đơn hàng</li>
+                <li>Nhận ưu đãi dành riêng cho thành viên</li>
+              </ul>
+            </div>
+
+            <p class="auth-brand__quote">
+              “Tư vấn đúng nhu cầu, giao đúng hẹn. Mình quay lại Gear Shop lần thứ ba rồi.”
+              <strong>Minh Hoàng · khách hàng thân thiết</strong>
+            </p>
+          </aside>
+
+          <div class="auth-card">
+            <p class="eyebrow">Chào mừng trở lại</p>
+            <h1 class="page-title" data-heading>Đăng nhập</h1>
+            <p class="auth-lead">Đăng nhập để tiếp tục đặt hàng và xem đơn hàng của bạn.</p>
+
+            <form class="form" data-login-form>
+              <div class="field">
+                <label for="account">Tên đăng nhập hoặc email</label>
+                <input id="account" name="account" type="text" autocomplete="username" required />
+              </div>
+              <div class="field">
+                <label for="password">Mật khẩu</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required />
+              </div>
+              <div class="form__actions">
+                <button class="btn btn--primary btn--large" type="submit">Đăng nhập</button>
+              </div>
+              <p class="form-error" data-error role="alert" hidden></p>
+            </form>
+
+            <form class="form" data-register-form hidden>
+              <div class="field">
+                <label for="reg-username">Tên đăng nhập</label>
+                <input id="reg-username" name="username" type="text" autocomplete="username" required />
+              </div>
+              <div class="field">
+                <label for="reg-email">Email</label>
+                <input id="reg-email" name="email" type="email" autocomplete="email" required />
+              </div>
+              <div class="field">
+                <label for="reg-password">Mật khẩu</label>
+                <input id="reg-password" name="password" type="password" autocomplete="new-password" required />
+              </div>
+              <div class="field">
+                <label for="reg-address">Địa chỉ (không bắt buộc)</label>
+                <input id="reg-address" name="address" type="text" autocomplete="street-address" />
+              </div>
+              <div class="form__actions">
+                <button class="btn btn--primary btn--large" type="submit">Tạo tài khoản</button>
+              </div>
+              <p class="form-error" data-register-error role="alert" hidden></p>
+            </form>
+
+            <p class="form__switch">
+              <span data-switch-text>Chưa có tài khoản?</span>
+              <button class="link-button" type="button" data-switch aria-pressed="false">Đăng ký</button>
+            </p>
+
+            <p class="demo-hint">Tài khoản demo: <strong>khachhang1</strong> / <strong>123456</strong>.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" data-site-footer></footer>
+
+    <script type="module" src="assets/js/auth.js"></script>
+  </body>
+</html>
