@@ -15,23 +15,14 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   cancelled: "Đã huỷ",
 };
 
-const STOCK_IMAGE_HOSTS = new Set([
-  "picsum.photos",
-  "fastly.picsum.photos",
-  "images.unsplash.com",
-  "source.unsplash.com",
-  "loremflickr.com",
-  "placehold.co",
-  "via.placeholder.com",
-  "dummyimage.com",
-]);
-
-/** Ảnh demo từ kho ảnh ngẫu nhiên không phải ảnh sản phẩm: thay bằng nền trung tính. */
+/** Trả về URL ảnh hợp lệ từ business service; null nếu thiếu hoặc sai định dạng. */
 export const resolveImage = (url: string | null | undefined): string | null => {
   if (!url) return null;
   try {
-    const { hostname } = new URL(url);
-    return STOCK_IMAGE_HOSTS.has(hostname) ? null : url;
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? url
+      : null;
   } catch {
     return null;
   }

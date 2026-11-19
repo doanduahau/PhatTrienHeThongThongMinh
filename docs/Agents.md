@@ -95,7 +95,7 @@ backend/
         cosine_kmeans/           Cosine + K-Means (gợi ý cá nhân hóa)
         fp_growth/               FP-Growth (thường mua kèm)
         svm_regex/               SVM + Regex (tìm kiếm thông minh)
-        rating_baseline/         Baseline (sản phẩm nổi bật)
+        rating_baseline/         Bayesian Weighted Rating (sản phẩm nổi bật)
       db/
         __init__.py
         config.py                Kết nối PostgreSQL read-only
@@ -226,6 +226,10 @@ Dữ liệu sản phẩm dùng thương hiệu chuẩn hoá: `products.brand_id`
 Response trả `brandId` + `brand: { id, name }`; body tạo/sửa sản phẩm dùng `brandId`
 (không còn `brand` free-text, bảng chi tiết không lưu thương hiệu). Quản lý thương hiệu qua
 `/api/brands` (GET công khai, POST/PUT/DELETE yêu cầu admin).
+
+Bộ lọc theo danh mục ở `GET /api/products?slug=` và `GET /api/brands?slug=` nhận **một slug**
+hoặc nhiều slug cách nhau bởi dấu phẩy (`slug=chuot,ban-phim`), dịch thành `category.slug IN (…)`.
+Frontend dùng cho trang nhóm `/danh-muc/gaming-gear`, `/danh-muc/office-gear`.
 
 Đánh giá sản phẩm (khách chấm sao, không cần mua hàng):
 

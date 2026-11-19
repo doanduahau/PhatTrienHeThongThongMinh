@@ -101,7 +101,31 @@ export const productQuerySchema = z.object({
   slug: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
   sort: z.enum(["newest", "price_asc", "price_desc", "name_asc", "rating_desc"]).default("newest"),
-});
+  inStock: z.union([z.string(), z.boolean()]).optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
+  connectivity: z.string().trim().optional(),
+  handOrientation: z.string().trim().optional(),
+  minWeight: z.coerce.number().optional(),
+  maxWeight: z.coerce.number().optional(),
+  pollingRate: z.coerce.number().optional(),
+  switchType: z.string().trim().optional(),
+  layout: z.string().trim().optional(),
+  hasRapidTrigger: z.union([z.string(), z.boolean()]).optional(),
+  hasHotswap: z.union([z.string(), z.boolean()]).optional(),
+  supportMacos: z.union([z.string(), z.boolean()]).optional(),
+  headphoneType: z.string().trim().optional(),
+  hasMic: z.union([z.string(), z.boolean()]).optional(),
+  hasAnc: z.union([z.string(), z.boolean()]).optional(),
+  padType: z.string().trim().optional(),
+  mouseControl: z.string().trim().optional(),
+  base: z.string().trim().optional(),
+  size: z.string().trim().optional(),
+  surface: z.string().trim().optional(),
+  speed: z.string().trim().optional(),
+  setupCategory: z.string().trim().optional(),
+  maxLoadKg: z.coerce.number().optional(),
+}).passthrough();
 
 export const productIdParamSchema = z.object({
   id: z.coerce

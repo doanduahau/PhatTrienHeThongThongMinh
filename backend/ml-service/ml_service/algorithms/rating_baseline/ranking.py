@@ -1,8 +1,9 @@
-"""Khối Sản phẩm nổi bật (Featured Products) - Thuật toán: Sắp xếp theo Rating (Baseline).
+"""Khối Sản phẩm nổi bật (Featured Products) - Thuật toán: Bayesian Weighted Rating.
 
-Sử dụng thuật toán xếp hạng theo Rating chuẩn hóa (Bayesian Average Rating)
-kết hợp giữa điểm sao trung bình (Rating) và số lượng đánh giá (Review Count),
-hoặc truy vấn trực tiếp bảng products và order_items trong PostgreSQL Supabase.
+Xếp hạng theo điểm sao trung bình (Rating) chuẩn hóa bằng số lượt đánh giá
+(Bayesian Average Rating, công thức tương tự IMDB), cộng thêm phần thưởng
+logarit cho lượt bán. Đầu vào là DataFrame có các cột rating, review_count,
+sold_count — do ``db.repository.fetch_featured_products_df`` truy vấn từ PostgreSQL.
 """
 
 from __future__ import annotations
@@ -18,16 +19,6 @@ class FeaturedProductsRanker:
 
     def __init__(self, min_reviews_quantile: float = 0.5) -> None:
         self.min_reviews_quantile = min_reviews_quantile
-
-    def rank_from_db(
-        self,
-        category_id: int | None = None,
-        top_n: int = 10,
-    ) -> list[dict[str, Any]]:
-        """Truy vấn trực tiếp danh sách sản phẩm nổi bật nhất từ PostgreSQL Supabase."""
-        from ml_service.db.repository import fetch_featured_products_from_db
-
-        return fetch_featured_products_from_db(category_id=category_id, limit=top_n)
 
     def calculate_bayesian_score(self, df: pd.DataFrame) -> pd.Series:
         """Tính điểm Bayesian Weighted Rating (công thức tương tự IMDB)."""

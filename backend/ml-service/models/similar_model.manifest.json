@@ -1,8 +1,8 @@
 {
-  "version": "20261107055347",
-  "trained_at": "2026-11-07T05:53:47.648948+00:00",
+  "version": "20261119182912",
+  "trained_at": "2026-11-19T18:29:12.435028+00:00",
   "source": "train.py",
   "metrics": {
-    "products": 100
+    "products": 405
   }
 }

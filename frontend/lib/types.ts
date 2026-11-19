@@ -66,7 +66,7 @@ export type User = {
   role?: string;
 };
 
-export type Session = { user: User; token: string };
+export type Session = { user: User; token?: string };
 
 export type CartLine = {
   productId: number;

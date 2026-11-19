@@ -10,7 +10,7 @@ from .config import (
 from .repository import (
     CATEGORY_MAP_VI_TO_SLUG,
     execute_smart_search_db,
-    fetch_featured_products_from_db,
+    fetch_featured_products_df,
     fetch_master_products_df,
     fetch_order_transactions,
     fetch_user_interactions,
@@ -21,7 +21,7 @@ __all__ = [
     "DATABASE_URL",
     "DB_CONFIG",
     "execute_smart_search_db",
-    "fetch_featured_products_from_db",
+    "fetch_featured_products_df",
     "fetch_master_products_df",
     "fetch_order_transactions",
     "fetch_user_interactions",

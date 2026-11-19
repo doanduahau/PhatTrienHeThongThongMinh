@@ -1,14 +1,10 @@
-import { EmptyState } from "@/components/ui";
+import { NotFound } from "@/components/not-found";
 
-export default function NotFound() {
+export default function NotFoundPage() {
   return (
-    <div className="mx-auto max-w-shell px-5 py-16 lg:px-10">
-      <EmptyState
-        title="Không tìm thấy trang"
-        text="Đường dẫn không tồn tại hoặc đã được chuyển đi."
-        href="/"
-        cta="Về trang chủ"
-      />
-    </div>
+    <NotFound
+      title="Ối! Trang này không tồn tại"
+      lead="Chắc tại lỗi kỹ thuật, không phải tại bạn đâu. Bạn có thể về trang chủ, xem danh mục hoặc tìm sản phẩm mình cần."
+    />
   );
 }

@@ -1,38 +1,39 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Product } from "@/lib/types";
 import { money, resolveImage } from "@/lib/format";
 import { ColorDot, Rating } from "./ui";
 import { CategoryArt } from "./category-art";
+import { QuickAdd } from "./quick-add";
 
-/** Ảnh + tên + giá. Toàn bộ card là một link, không nút riêng. */
+/**
+ * Ảnh + tên + giá. Toàn bộ card là một link (pseudo-element phủ hết card),
+ * nút thêm nhanh nằm ngoài link nên vẫn bấm được.
+ */
 export function ProductCard({ product }: { product: Product }) {
   const image = resolveImage(product.imageUrl);
-  const out = product.isInStock === false;
+  // List API chỉ trả `isInStock`; chi tiết mới có `stockQuantity` → thiếu số lượng thì vẫn còn hàng.
+  const out =
+    product.isInStock === false ||
+    (product.stockQuantity != null && product.stockQuantity <= 0);
   return (
-    <li className="list-none">
+    <li className="relative list-none">
       <Link
         href={`/san-pham/${product.id}`}
-        className="group flex h-full flex-col overflow-hidden rounded-card border border-line bg-bg transition-colors hover:border-accent/40"
+        className="group flex h-full flex-col overflow-hidden rounded-card border border-line bg-bg transition-colors after:absolute after:inset-0 after:content-[''] hover:border-accent/40"
       >
         <div className="relative aspect-[3/2] w-full overflow-hidden bg-subtle">
           {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={image}
               alt={product.name}
-              width={600}
-              height={400}
-              loading="lazy"
-              className="size-full object-cover"
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+              className="object-cover"
             />
           ) : (
             <CategoryArt slug={product.category?.slug} className="absolute inset-0 m-auto size-16 text-muted" />
           )}
-          {out ? (
-            <span className="absolute left-3 top-3 rounded-btn bg-ink/80 px-2 py-1 text-xs font-medium text-bg">
-              Hết hàng
-            </span>
-          ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-1.5 p-4">
           <p className="text-xs text-muted">
@@ -41,9 +42,9 @@ export function ProductCard({ product }: { product: Product }) {
           <p className="font-medium leading-snug group-hover:text-accent">
             {product.name}
           </p>
-          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-            <span className="font-semibold">{money(product.price)}</span>
-            <Rating value={product.rating} />
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-2">
+            <span className="font-semibold tabular-nums">{money(product.price)}</span>
+            <Rating value={product.rating} count={product.ratingCount} />
           </div>
           <div className="flex items-center justify-between gap-2">
             <ColorDot color={product.color} />
@@ -53,6 +54,7 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         </div>
       </Link>
+      <QuickAdd product={product} className="absolute right-3 top-3 z-10" />
     </li>
   );
 }
@@ -66,7 +68,7 @@ export function ProductGrid({
 }) {
   return (
     <ul
-      className={`grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6 ${className}`}
+      className={`grid grid-cols-2 gap-4 lg:gap-6 ${className}`}
     >
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />

@@ -3,7 +3,7 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import { StoreProvider } from "@/components/store";
-import { Header } from "@/components/header";
+import { HeaderShell } from "@/components/header-shell";
 import { Footer } from "@/components/footer";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -36,8 +36,12 @@ export default function RootLayout({
           Tới nội dung chính
         </a>
         <StoreProvider>
-          <Suspense fallback={<div className="h-24 border-b border-line bg-bg" />}>
-            <Header />
+          <Suspense
+            fallback={
+              <div className="h-24 bg-bg" aria-hidden="true" />
+            }
+          >
+            <HeaderShell />
           </Suspense>
           <main id="main" className="flex-1">
             {children}

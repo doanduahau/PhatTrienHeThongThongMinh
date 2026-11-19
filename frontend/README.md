@@ -31,9 +31,11 @@ Biến môi trường (`.env.local`, xem `.env.example`):
 | Route | Nội dung | Render |
 | :--- | :--- | :--- |
 | `/` | Trang chủ: hero slideshow, danh mục, gear bán chạy, smart search, cam kết, showroom | Server + Suspense |
-| `/san-pham` | Listing + bộ lọc (danh mục, hãng, sort, tìm thường / tìm hiểu câu `smart=1`) | Server, searchParams |
+| `/san-pham` | Tất cả sản phẩm + bộ lọc (hãng, sort, tìm thường / tìm hiểu câu `smart=1`) | Server, searchParams |
+| `/danh-muc/[slug]` | Listing một danh mục, hoặc trang nhóm gộp nhiều danh mục (`gaming-gear` = chuột + bàn phím + lót chuột + tai nghe, `office-gear` = ghế + phụ kiện CTH + bàn + soundcard + arm). Slug nằm ở path, không còn `?slug=` | Server, searchParams |
 | `/san-pham/[id]` | Chi tiết + thông số + sản phẩm tương tự (ML, có fallback) | Server |
-| `/gio-hang` | Giỏ khách (localStorage) / giỏ server + checkout | Client |
+| `/gio-hang` | Giỏ khách (localStorage) / giỏ server, xem đầy đủ | Client |
+| `/thanh-toan` | Chọn phí ship + địa chỉ/SĐT, đặt đơn | Client |
 | `/dang-nhap` | Đăng nhập / đăng ký, đồng bộ giỏ khách sau đăng nhập | Client |
 | `/don-hang` | Lịch sử đơn hàng, huỷ đơn pending | Client |
 
@@ -42,7 +44,8 @@ Biến môi trường (`.env.local`, xem `.env.example`):
 ```
 app/            # routes (slug tiếng Việt giữ như bản cũ)
 components/     # ui, header, footer, store (auth+giỏ+toast), product-card, hero...
-lib/            # api.ts (typed fetch), types.ts, format.ts (tiền tệ vi-VN)
+lib/            # api.ts (typed fetch), types.ts, format.ts (tiền tệ vi-VN),
+                # nav-data.ts + category-groups.ts (mega-menu và trang nhóm)
 ```
 
 - Token màu/spacing/radius khai báo trong `app/globals.css` (`:root` + `@theme`), component chỉ dùng class token (`bg-accent`, `text-muted`, `rounded-card`).

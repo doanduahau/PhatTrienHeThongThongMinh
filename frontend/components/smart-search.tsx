@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, type FormEvent } from "react";
-import { Button } from "./ui";
+import { Button, Container } from "./ui";
+import { resolveImage } from "@/lib/format";
 
 const SUGGESTIONS = [
   "chuột không dây dưới 2 triệu",
@@ -11,9 +13,16 @@ const SUGGESTIONS = [
   "ghế công thái học lưng lưới",
 ];
 
-export function SmartSearchBand() {
+export function SmartSearchBand({
+  image,
+  imageAlt,
+}: {
+  image?: string | null;
+  imageAlt?: string;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const src = resolveImage(image);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,18 +33,29 @@ export function SmartSearchBand() {
   };
 
   return (
-    <section id="tim-kiem" aria-labelledby="tim-kiem-heading" className="bg-ink py-14 text-bg">
-      <div className="mx-auto grid w-full max-w-shell gap-8 px-5 lg:grid-cols-2 lg:px-10">
-        <div className="space-y-3">
-          <h2 id="tim-kiem-heading" className="text-3xl font-bold lg:text-4xl">
+    <section id="tim-kiem" aria-labelledby="tim-kiem-heading" className="bg-ink py-12 text-bg lg:py-16">
+      <Container
+        className={`grid items-center gap-8 md:gap-12 ${src ? "md:grid-cols-2" : ""}`}
+      >
+        {src ? (
+          <div className="relative aspect-[4/3] overflow-hidden rounded-card bg-bg">
+            <Image
+              src={src}
+              alt={imageAlt ?? "Gear Shop"}
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+        ) : null}
+        <div className="space-y-4">
+          <h2 id="tim-kiem-heading" className="text-h1 font-bold">
             Chưa biết chọn gì? Mô tả thứ bạn cần.
           </h2>
           <p className="max-w-md text-bg/70">
             Nói theo cách của bạn: ngân sách, kiểu kết nối, layout bàn phím hay
-            trọng lượng chuột.
+            trọng lượng chuột. Hệ thống gợi ý gear đúng nhu cầu, không phải đoán.
           </p>
-        </div>
-        <div className="flex flex-col justify-center gap-4">
           <form onSubmit={submit} className="flex gap-2">
             <label className="sr-only" htmlFor="smart-query">Câu mô tả</label>
             <input
@@ -46,7 +66,7 @@ export function SmartSearchBand() {
               placeholder="chuột không dây dưới 2 triệu"
               autoComplete="off"
               required
-              className="h-12 w-full rounded-btn border border-bg/20 bg-bg/10 px-4 text-bg placeholder:text-bg/50"
+              className="h-12 w-full rounded-btn border border-white/20 bg-white/10 px-4 text-bg placeholder:text-bg/50 focus:border-accent focus:outline-none"
             />
             <Button type="submit" size="lg" className="shrink-0">
               Tìm sản phẩm
@@ -63,14 +83,14 @@ export function SmartSearchBand() {
                     inputRef.current.focus();
                   }
                 }}
-                className="rounded-full border border-bg/20 px-3 py-1.5 text-xs text-bg/80 hover:bg-bg/10"
+                className="rounded-btn border border-white/20 bg-white/10 px-3 py-1.5 text-xs text-bg/80 transition-colors hover:border-accent hover:text-accent-soft"
               >
                 {tag}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

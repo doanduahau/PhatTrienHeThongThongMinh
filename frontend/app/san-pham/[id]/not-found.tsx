@@ -1,14 +1,10 @@
-import { EmptyState } from "@/components/ui";
+import { NotFound } from "@/components/not-found";
 
-export default function NotFound() {
+export default function ProductNotFound() {
   return (
-    <div className="mx-auto max-w-shell px-5 py-16 lg:px-10">
-      <EmptyState
-        title="Không tìm thấy sản phẩm"
-        text="Sản phẩm có thể đã bị xoá hoặc đường dẫn không đúng."
-        href="/san-pham"
-        cta="Xem sản phẩm"
-      />
-    </div>
+    <NotFound
+      title="Không tìm thấy sản phẩm"
+      lead="Sản phẩm này có thể đã ngừng bán hoặc đường dẫn không đúng. Thử tìm lại theo tên, hoặc chọn một danh mục bên dưới."
+    />
   );
 }

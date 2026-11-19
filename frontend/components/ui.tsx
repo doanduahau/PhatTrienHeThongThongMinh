@@ -60,37 +60,50 @@ export function SectionHeader({
   href,
   linkLabel,
   id,
+  actions,
 }: {
   title: string;
   href?: string;
   linkLabel?: string;
   id?: string;
+  actions?: ReactNode;
 }) {
   return (
     <div className="mb-6 flex items-end justify-between gap-4">
-      <h2 id={id} className="text-2xl font-semibold lg:text-3xl">
+      <h2 id={id} className="text-h2 font-semibold">
         {title}
       </h2>
-      {href && linkLabel ? (
-        <Link
-          href={href}
-          className="shrink-0 text-sm font-medium text-accent hover:underline"
-        >
-          {linkLabel}
-        </Link>
-      ) : null}
+      <div className="flex shrink-0 items-center gap-2">
+        {actions}
+        {href && linkLabel ? (
+          <Link
+            href={href}
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            {linkLabel}
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-export function Rating({ value }: { value: number | null | undefined }) {
+export function Rating({
+  value,
+  count,
+}: {
+  value: number | null | undefined;
+  count?: number | null;
+}) {
   const rating = Number(value);
-  if (!Number.isFinite(rating) || rating <= 0) return null;
+  const reviews = Number(count) || 0;
+  // §6: chỉ hiện sao khi có đánh giá thật (ratingCount > 0).
+  if (reviews <= 0 || !Number.isFinite(rating) || rating <= 0) return null;
   const rounded = Math.round(rating);
   return (
     <span
-      className="inline-flex items-center gap-1 text-sm"
-      aria-label={`Đánh giá ${rating.toFixed(1)} trên 5`}
+      className="inline-flex shrink-0 items-center gap-1 text-sm"
+      aria-label={`Đánh giá ${rating.toFixed(1)} trên 5, ${reviews} nhận xét`}
     >
       <span className="text-star" aria-hidden="true">
         {[1, 2, 3, 4, 5].map((index) => (
@@ -99,7 +112,9 @@ export function Rating({ value }: { value: number | null | undefined }) {
           </span>
         ))}
       </span>
-      <span className="text-muted">{rating.toFixed(1)}</span>
+      <span className="whitespace-nowrap text-muted">
+        {rating.toFixed(1)} ({reviews})
+      </span>
     </span>
   );
 }

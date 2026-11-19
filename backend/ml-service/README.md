@@ -29,7 +29,7 @@ backend/ml-service/
 │   │   ├── cosine_kmeans/        # Cosine + K-Means (gợi ý cá nhân hóa)
 │   │   ├── fp_growth/            # FP-Growth (thường mua kèm)
 │   │   ├── svm_regex/            # SVM + Regex (tìm kiếm thông minh)
-│   │   └── rating_baseline/      # Baseline (sản phẩm nổi bật)
+│   │   └── rating_baseline/      # Bayesian Weighted Rating (sản phẩm nổi bật)
 │   └── db/
 │       ├── config.py             # Kết nối PostgreSQL read-only
 │       ├── repository.py         # Truy vấn DB cho ML

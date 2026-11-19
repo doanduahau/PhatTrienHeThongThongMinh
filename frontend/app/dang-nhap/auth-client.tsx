@@ -83,7 +83,7 @@ function AuthForms() {
             <ul className="space-y-2 text-sm text-bg/80">
               <li>Đặt hàng nhanh với địa chỉ đã lưu</li>
               <li>Theo dõi trạng thái đơn hàng</li>
-              <li>Nhận ưu đãi dành riêng cho thành viên</li>
+              <li>Đồng bộ giỏ hàng giữa các thiết bị</li>
             </ul>
           </div>
           <p className="text-xs text-bg/50">Tài khoản demo: khachhang1 / 123456</p>

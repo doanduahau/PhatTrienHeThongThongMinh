@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -36,14 +37,13 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel: (id: number) =
             <li key={item.id} className="flex items-center gap-3 text-sm">
               <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-btn bg-subtle">
                 {image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" width={48} height={48} loading="lazy" className="size-full object-cover" />
+                  <Image src={image} alt="" width={48} height={48} className="size-full object-cover" />
                 ) : null}
               </span>
               <span className="flex-1">
                 {item.product?.name ?? "Sản phẩm"} × {item.quantity}
               </span>
-              <span className="font-medium">{money(Number(item.price) * item.quantity)}</span>
+              <span className="font-medium tabular-nums">{money(Number(item.price) * item.quantity)}</span>
             </li>
           );
         })}
@@ -64,7 +64,7 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel: (id: number) =
             Huỷ đơn
           </button>
         ) : null}
-        <span className="ml-auto font-semibold">Tổng {money(order.totalAmount)}</span>
+        <span className="ml-auto font-semibold tabular-nums">Tổng {money(order.totalAmount)}</span>
       </div>
     </article>
   );

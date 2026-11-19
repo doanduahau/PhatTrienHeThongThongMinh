@@ -14,9 +14,7 @@ import type {
 } from "./types";
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-
-const TOKEN_KEY = "gear_token";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 export class ApiError extends Error {
   httpStatus: number;
@@ -28,13 +26,6 @@ export class ApiError extends Error {
     this.data = data;
   }
 }
-
-export const tokenStore = {
-  get: (): string | null =>
-    typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY),
-  set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-};
 
 type QueryParams = Record<string, string | number | boolean | undefined>;
 
@@ -48,6 +39,7 @@ const buildQuery = (params: QueryParams = {}) => {
   return text ? `?${text}` : "";
 };
 
+/** Gọi công khai thẳng business service (không cần đăng nhập). */
 async function request<T>(
   path: string,
   {
@@ -59,8 +51,6 @@ async function request<T>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const token = tokenStore.get();
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   let response: Response;
   try {
@@ -72,7 +62,7 @@ async function request<T>(
     });
   } catch {
     throw new ApiError(
-      "Không kết nối được tới API. Kiểm tra business service đang chạy ở cổng 3000.",
+      "Không kết nối được tới API. Kiểm tra business service đang chạy.",
       0,
     );
   }
@@ -88,20 +78,73 @@ async function request<T>(
   return (payload as { data: T }).data;
 }
 
+/** Gọi endpoint cần đăng nhập qua proxy same-origin — cookie httpOnly tự đính kèm. */
+async function authRequest<T>(
+  path: string,
+  { method = "GET", body }: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/proxy/${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError("Không kết nối được máy chủ.", 0);
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new ApiError(
+      (payload as { message?: string }).message || "Yêu cầu thất bại.",
+      response.status,
+      (payload as { data?: unknown }).data,
+    );
+  }
+  return (payload as { data: T }).data;
+}
+
+/** Gọi route auth same-origin (login/register/me/logout) — trả JSON thô của route. */
+async function authFetch<T>(
+  path: string,
+  { method = "GET", body }: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError("Không kết nối được máy chủ.", 0);
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new ApiError(
+      (payload as { message?: string }).message || "Yêu cầu thất bại.",
+      response.status,
+    );
+  }
+  return payload as T;
+}
+
 /** API công khai — đọc phía server, cache ngắn theo Catalog. */
 export const catalogApi = {
   categories: () =>
     request<Category[]>("/api/categories", { revalidate: 300 }),
-  brands: () => request<Brand[]>("/api/brands", { revalidate: 300 }),
+  brands: (params?: QueryParams) => request<Brand[]>(`/api/brands${buildQuery(params)}`, { revalidate: 300 }),
   products: (params: QueryParams) =>
     request<ProductList>(`/api/products${buildQuery(params)}`, {
       revalidate: 60,
     }),
   product: (id: number) =>
     request<Product>(`/api/products/${id}`, { revalidate: 60 }),
-  featured: (limit = 8) =>
+  featured: (limit = 8, categoryId?: number) =>
     request<FeaturedList>(
-      `/api/recommendations/featured${buildQuery({ limit })}`,
+      `/api/recommendations/featured${buildQuery({ limit, categoryId })}`,
       { revalidate: 60 },
     ),
   similar: (id: number, limit = 4) =>
@@ -115,11 +158,14 @@ export const catalogApi = {
     ),
 };
 
-/** API phía client — cần token, không cache. */
+/** API phía client — đăng nhập qua cookie httpOnly, không cache. */
 export const api = {
   smartSearch: catalogApi.smartSearch,
+  /** Gợi ý cá nhân hoá — yêu cầu đăng nhập; lỗi 401/503 do caller tự fallback. */
+  forYou: (limit = 8) =>
+    authRequest<FeaturedList>(`recommendations/for-you${buildQuery({ limit })}`),
   login: (account: string, password: string) =>
-    request<Session>("/api/auth/login", {
+    authFetch<Session>("/api/auth/login", {
       method: "POST",
       body: { account, password },
     }),
@@ -128,32 +174,34 @@ export const api = {
     email: string;
     password: string;
     address?: string;
-  }) => request<Session>("/api/auth/register", { method: "POST", body: payload }),
-  me: () => request<User>("/api/auth/me"),
+  }) =>
+    authFetch<Session>("/api/auth/register", { method: "POST", body: payload }),
+  me: () => authFetch<User>("/api/auth/me"),
+  logout: () => authFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
 
   shippingMethods: () => request<ShippingMethod[]>("/api/shipping-methods"),
-  cart: () => request<Cart>("/api/cart"),
+  cart: () => authRequest<Cart>("cart"),
   addToCart: (productId: number, quantity: number) =>
-    request<Cart>("/api/cart/items", {
+    authRequest<Cart>("cart/items", {
       method: "POST",
       body: { productId, quantity },
     }),
   updateCartItem: (productId: number, quantity: number) =>
-    request<Cart>(`/api/cart/items/${productId}`, {
+    authRequest<Cart>(`cart/items/${productId}`, {
       method: "PUT",
       body: { quantity },
     }),
   removeCartItem: (productId: number) =>
-    request<Cart>(`/api/cart/items/${productId}`, { method: "DELETE" }),
+    authRequest<Cart>(`cart/items/${productId}`, { method: "DELETE" }),
 
   orders: (params: QueryParams = {}) =>
-    request<OrderList>(`/api/orders${buildQuery(params)}`),
-  order: (id: number) => request<Order>(`/api/orders/${id}`),
+    authRequest<OrderList>(`orders${buildQuery(params)}`),
+  order: (id: number) => authRequest<Order>(`orders/${id}`),
   checkout: (payload: {
     shippingMethodId: string;
     shippingAddress: string;
     shippingPhone: string;
-  }) => request<Order>("/api/orders", { method: "POST", body: payload }),
+  }) => authRequest<Order>("orders", { method: "POST", body: payload }),
   cancelOrder: (id: number) =>
-    request<Order>(`/api/orders/${id}/cancel`, { method: "PATCH" }),
+    authRequest<Order>(`orders/${id}/cancel`, { method: "PATCH" }),
 };

@@ -338,44 +338,46 @@ def execute_smart_search_db(
     return results
 
 
-def fetch_featured_products_from_db(
-    category_id: int | None = None,
-    limit: int = 10,
-) -> list[dict[str, Any]]:
-    """Truy vấn sản phẩm xếp hạng theo rating và lượt bán trực tiếp từ PostgreSQL."""
-    where_sql = "WHERE p.category_id = %s" if category_id else ""
-    params = [category_id, limit] if category_id else [limit]
+def fetch_featured_products_df(category_id: int | None = None) -> pd.DataFrame:
+    """Truy vấn dữ liệu xếp hạng sản phẩm nổi bật: rating, số lượt đánh giá, lượt bán.
 
-    sql = f"""
-        SELECT 
+    Số lượt đánh giá đếm từ bảng ratings — nguồn thật mà rating.service.js duy trì —
+    thay vì đọc cột products.rating_count để hai bên không lệch nhau.
+    """
+    sql = """
+        SELECT
             p.id as product_id,
             p.name,
-            c.name as category,
-            b.id as brand_id,
+            c.id as category_id,
+            c.name as category_name,
             b.name as brand,
             p.price,
             p.rating,
-            p.image_url,
-            COALESCE(SUM(oi.quantity), 0) as sold_count
+            COALESCE(rv.review_count, 0) as review_count,
+            COALESCE(sd.sold_count, 0) as sold_count
         FROM products p
         JOIN categories c ON p.category_id = c.id
         JOIN brands b ON p.brand_id = b.id
-        LEFT JOIN order_items oi ON oi.product_id = p.id
-        {where_sql}
-        GROUP BY p.id, c.name, b.id, b.name
-        ORDER BY p.rating DESC, sold_count DESC
-        LIMIT %s;
+        LEFT JOIN (
+            SELECT product_id, COUNT(*) as review_count
+            FROM ratings
+            GROUP BY product_id
+        ) rv ON rv.product_id = p.id
+        LEFT JOIN (
+            SELECT product_id, SUM(quantity) as sold_count
+            FROM order_items
+            GROUP BY product_id
+        ) sd ON sd.product_id = p.id
+        WHERE %(category_id)s::int IS NULL OR p.category_id = %(category_id)s::int
+        ORDER BY p.id;
     """
-    results = []
     with get_cursor(commit=False) as cur:
-        cur.execute(sql, tuple(params))
-        cols = [d[0] for d in cur.description]
-        for rank, row in enumerate(cur.fetchall(), start=1):
-            d = dict(zip(cols, row))
-            d["rank"] = rank
-            d["price"] = float(d["price"]) if d["price"] is not None else 0.0
-            d["rating"] = float(d["rating"]) if d["rating"] is not None else 0.0
-            d["sold_count"] = int(d["sold_count"])
-            results.append(d)
+        cur.execute(sql, {"category_id": category_id})
+        cols = [desc[0] for desc in cur.description]
+        df = pd.DataFrame(cur.fetchall(), columns=cols)
 
-    return results
+    if not df.empty:
+        for col in ("price", "rating", "review_count", "sold_count"):
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+        df["product_id"] = df["product_id"].astype(str)
+    return df
