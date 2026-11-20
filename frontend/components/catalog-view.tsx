@@ -204,8 +204,8 @@ async function ProductResults({
   return (
     <div>
       {/* Header đếm số lượng & sắp xếp */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-        <span className="text-base font-semibold text-ink">
+      <div className="mb-6 flex h-11 items-center justify-between gap-4 border-b border-line pb-4">
+        <span className="text-base font-semibold leading-none text-ink">
           {total} sản phẩm
         </span>
         <ProductSortSelect defaultValue={sort} basePath={basePath} />

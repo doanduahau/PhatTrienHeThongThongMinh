@@ -96,7 +96,8 @@ export const login = async ({ account, password }) => {
     throw forbidden("Tài khoản đã bị khoá, vui lòng liên hệ quản trị viên!");
   }
 
-  return { user: { ...user, password: undefined }, token: signToken(user) };
+  const publicUser = Object.fromEntries(Object.keys(publicUserSelect).map((key) => [key, user[key]]));
+  return { user: publicUser, token: signToken(user) };
 };
 
 export const getProfile = async (userId) => {

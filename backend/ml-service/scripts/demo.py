@@ -5,7 +5,7 @@ Import và tái sử dụng các hàm test trực quan từ từng thư mục th
 - src/algorithms/fp_growth/demo.py        (Gợi ý mua kèm - FP-Growth)
 - src/algorithms/cosine_kmeans/demo.py    (Gợi ý cá nhân hóa - Cosine + K-Means)
 - src/algorithms/svm_regex/demo.py        (Tìm kiếm thông minh - SVM + Regex)
-- src/algorithms/rating_baseline/demo.py  (Sản phẩm nổi bật - Rating Baseline)
+- src/algorithms/decision_tree/demo.py  (Sản phẩm nổi bật - Decision Tree)
 
 Sử dụng (chạy từ thư mục ``backend/ml-service``):
     # 1. Chạy tự động toàn bộ 5 khối nghiệp vụ (kèm thêm mô phỏng hành trình khách hàng):
@@ -42,7 +42,7 @@ from src.algorithms.cosine.demo import run_interactive_cosine, test_cosine
 from src.algorithms.fp_growth.demo import run_interactive_fpgrowth, test_fpgrowth
 from src.algorithms.cosine_kmeans.demo import run_interactive_kmeans, test_kmeans
 from src.algorithms.svm_regex.demo import run_interactive_search, test_smart_search
-from src.algorithms.rating_baseline.demo import run_interactive_featured, test_featured, test_featured_visual
+from src.algorithms.decision_tree.demo import run_interactive_featured, test_featured, test_featured_visual
 
 
 def run_customer_journey_simulation(
@@ -55,7 +55,7 @@ def run_customer_journey_simulation(
     print(" 🛍️  MÔ PHỎNG HÀNH TRÌNH MUA SẮM THÔNG MINH QUA 5 THUẬT TOÁN (END-TO-END DEMO)")
     print("🌟 " * 25)
 
-    print(f"\n▶ BƯỚC 1/5 [TRANG CHỦ]: Hiển thị bảng xếp hạng Sản phẩm nổi bật (Rating Baseline)")
+    print(f"\n▶ BƯỚC 1/5 [TRANG CHỦ]: Hiển thị bảng xếp hạng Sản phẩm nổi bật (Decision Tree)")
     test_featured(top_n=3)
 
     print(f"\n▶ BƯỚC 2/5 [GỢI Ý DÀNH RIÊNG CHO BẠN]: User #{user_id} đăng nhập vào hệ thống (Cosine + K-Means)")
@@ -87,7 +87,7 @@ def run_interactive_mode() -> None:
         print("  2. 🛒 Gợi ý mua kèm (FP-Growth)                     -> Xem giỏ hàng, luật kết hợp & giá Combo")
         print("  3. 👤 Gợi ý cá nhân hóa (Cosine + K-Means)          -> Xem lịch sử User, cụm Persona & Cluster Boost")
         print("  4. 🧠 Tìm kiếm thông minh (SVM + Regex)             -> Bóc tách Intent, Ràng buộc cứng & Soft Tags")
-        print("  5. 🏆 Sản phẩm nổi bật (Rating Baseline)            -> Phân rã điểm Bayesian & Lọc theo Danh mục/Hãng")
+        print("  5. 🏆 Sản phẩm nổi bật (Decision Tree)              -> Cây quyết định & Lọc theo Danh mục/Hãng")
         print("  6. 🌟 Mô phỏng Hành trình Khách hàng (Chạy liên hoàn cả 5 bước từ Trang chủ -> Giỏ hàng)")
         print("  0. Thoát")
 
@@ -161,7 +161,7 @@ def main() -> None:
 
     print("\n" + "✅ " * 18)
     print(" HOÀN THÀNH TẤT CẢ CÁC BÀI TEST KIỂM THỬ HỆ THỐNG!")
-    print(" 💡 Mẹo: Chạy 'python test.py -i' để mở Menu tương tác hoặc 'python test.py -j' để xem Hành trình khách hàng.")
+    print(" 💡 Mẹo: Chạy 'python scripts/demo.py -i' để mở Menu tương tác hoặc 'python scripts/demo.py -j' để xem Hành trình khách hàng.")
     print("✅ " * 18 + "\n")
 
 

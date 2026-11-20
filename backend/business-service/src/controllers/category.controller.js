@@ -16,6 +16,23 @@ export const getAll = async (_req, res) => {
   }
 };
 
+export const getById = async (req, res) => {
+  const params = validateInput(categoryIdParamSchema, req.params);
+  if (!params.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", params.errors, 400);
+  }
+
+  try {
+    const data = await categoryService.getById(params.data.id);
+    if (!data) {
+      return sendError(res, "Danh mục không tồn tại!", "404", null, 404);
+    }
+    return sendSuccess(res, data, "Lấy danh mục thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Lấy danh mục thất bại!");
+  }
+};
+
 export const create = async (req, res) => {
   const validation = validateInput(createCategorySchema, req.body);
   if (!validation.success) {

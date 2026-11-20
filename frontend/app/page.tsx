@@ -77,6 +77,19 @@ async function HomeContent() {
   );
   const forYou = suggestions.filter((product) => !shown.has(product.id)).slice(0, 8);
 
+  // Chuẩn bị danh sách ảnh chuyển liên tục cho SmartSearchBand (900x900)
+  // Ưu tiên các sản phẩm nổi bật ML (items), sau đó tới gợi ý (suggestions)
+  const searchSlides = [
+    ...items.slice(0, 5).map((p) => ({ image: p.imageUrl, name: p.name })),
+    ...suggestions.slice(0, 5).map((p) => ({ image: p.imageUrl, name: p.name })),
+  ];
+  if (searchSlides.length === 0) {
+    searchSlides.push({
+      image: "https://cdn.shopify.com/s/files/1/0636/9044/0949/products/chu-t-khong-day-sieu-nh-logitech-g-pro-x-superlight-wireless-37089285996789.jpg?v=1677194289",
+      name: "Logitech G Pro X Superlight",
+    });
+  }
+
   return (
     <>
       {heroProducts.length > 0 ? (
@@ -101,7 +114,7 @@ async function HomeContent() {
         </section>
       ) : null}
 
-      <SmartSearchBand image={items[0]?.imageUrl} imageAlt={items[0]?.name} />
+      <SmartSearchBand items={searchSlides} />
 
       <section className="py-12 lg:py-16" aria-label="Cam kết dịch vụ">
         <Container className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

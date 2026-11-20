@@ -4,7 +4,8 @@ Kết hợp:
 1. SVM (Calibrated LinearSVC + TF-IDF): Phân loại intent (tim_kiem_san_pham vs ngoai_pham_vi).
 2. Regex Rules: Bóc tách ràng buộc cứng (giá min/max, danh mục, kết nối, cân nặng...).
 3. Regex Soft Tags: Bóc tách 42 thuộc tính mềm (claw grip, silent, thocky, ergonomic...).
-4. Database Query: Tự động ánh xạ các ràng buộc sang câu lệnh SQL truy vấn trực tiếp vào PostgreSQL Supabase.
+
+Business service ánh xạ kết quả parse sang truy vấn Prisma.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ DEFAULT_MODEL_PATH = MODELS_DIR / "intent_model.joblib"
 
 
 class SmartSearchEngine:
-    """Bộ xử lý tìm kiếm thông minh kết hợp SVM, Regex và truy vấn PostgreSQL."""
+    """Bộ phân tích tìm kiếm bằng SVM và Regex, không truy vấn DB."""
 
     def __init__(self, model_path: str | Path | None = None) -> None:
         target_path = Path(model_path) if model_path else DEFAULT_MODEL_PATH
@@ -32,19 +33,6 @@ class SmartSearchEngine:
         self.classifier: IntentClassifier | None = None
         if self.model_path and self.model_path.exists():
             self.classifier = IntentClassifier.load(self.model_path)
-
-    def train_intent_model(
-        self, texts: list[str], labels: list[str], save_path: str | Path | None = None
-    ) -> IntentClassifier:
-        """Huấn luyện mô hình phân loại intent bằng TF-IDF + LinearSVC."""
-        clf = IntentClassifier()
-        clf.train(texts, labels)
-        if save_path:
-            clf.save(save_path)
-            self.model_path = Path(save_path)
-        self.classifier = clf
-        return clf
-
     def process_query(self, query: str) -> dict[str, Any]:
         """Phân tích câu truy vấn của người dùng từ thanh tìm kiếm."""
         cleaned_query = query.strip()
@@ -126,43 +114,4 @@ class SmartSearchEngine:
             "hard_constraints": hard_constraints,
             "soft_tags": soft_tags,
             "should_query_db": should_query_db,
-        }
-
-    def search_in_db(self, query: str, limit: int = 20) -> dict[str, Any]:
-        """Xử lý truy vấn NLP và trực tiếp truy vấn Database PostgreSQL Supabase."""
-        from src.db.repository import build_smart_search_sql, execute_smart_search_db
-
-        analysis = self.process_query(query)
-
-        # Nếu câu ngoài phạm vi -> không truy vấn DB, trả về danh sách rỗng
-        if not analysis["should_query_db"]:
-            return {
-                **analysis,
-                "sql_query": None,
-                "products_count": 0,
-                "products": [],
-                "message": "Truy vấn không thuộc phạm vi tìm kiếm sản phẩm trong database.",
-            }
-
-        _, _, readable_sql = build_smart_search_sql(
-            hard_constraints=analysis["hard_constraints"],
-            soft_tags=analysis["soft_tags"],
-            raw_query=query,
-            limit=limit,
-        )
-
-        # Truy vấn vào Database PostgreSQL với các điều kiện đã bóc tách
-        products = execute_smart_search_db(
-            hard_constraints=analysis["hard_constraints"],
-            soft_tags=analysis["soft_tags"],
-            raw_query=query,
-            limit=limit,
-        )
-
-        return {
-            **analysis,
-            "sql_query": readable_sql,
-            "products_count": len(products),
-            "products": products,
-            "message": f"Tìm thấy {len(products)} sản phẩm phù hợp từ cơ sở dữ liệu.",
         }

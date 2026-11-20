@@ -41,5 +41,5 @@ export const uploadImage = async (file) => {
   }
 
   const { data } = storage.getPublicUrl(path);
-  return { url: data.publicUrl, path, size: file.size, contentType: file.mimetype };
+  return { url: data.publicUrl, source: "upload", path, size: file.size, contentType: file.mimetype };
 };

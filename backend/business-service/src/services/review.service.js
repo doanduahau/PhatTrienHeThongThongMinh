@@ -74,3 +74,13 @@ export const removeReview = async (userId, productId) => {
   await prisma.review.delete({ where: { id: review.id } });
   return { removed: true };
 };
+
+/** Xoá nhận xét theo admin (qua productId + reviewId); giữ nguyên phiếu sao (ratings). */
+export const removeReviewByAdmin = async ({ productId, reviewId }) => {
+  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  if (!review) throw notFound("Không tìm thấy nhận xét này!");
+  if (review.productId !== productId) throw badRequest("Nhận xét này không thuộc sản phẩm đã chọn!");
+
+  await prisma.review.delete({ where: { id: review.id } });
+  return { removed: true };
+};

@@ -24,18 +24,6 @@ const sortMap = {
   rating_desc: { rating: "desc" },
 };
 
-const DETAIL_TABLE_BY_SLUG = {
-  chuot: "mouse",
-  "ban-phim": "keyboard",
-  "tai-nghe": "headphone",
-  soundcard: "headphone",
-  "lot-chuot": "mousepad",
-  ghe: "setup",
-  ban: "setup",
-  "arm-man-hinh": "setup",
-  "phu-kien-cong-thai-hoc": "setup",
-};
-
 // Bảng mice/keyboards dùng bộ giá trị riêng, bảng headphones dùng bộ khác.
 const CONNECTIVITY_BY_TABLE = {
   mouse: ["wired", "wireless", "tri_mode"],
@@ -111,7 +99,7 @@ const buildWhere = ({
   }
 
   // Các bảng chi tiết mà tập slug đang xem dùng; rỗng = trang toàn catalog (mở cho mọi bảng).
-  const tables = slugs.map((value) => DETAIL_TABLE_BY_SLUG[value]).filter(Boolean);
+  const tables = slugs.map((value) => getDetailModel(value)).filter(Boolean);
   const isOpenTo = (table) => tables.length === 0 || tables.includes(table);
 
   /**
@@ -225,9 +213,9 @@ export const getAll = async ({ page, limit, sort, ...filters }) => {
   ]);
 
   return {
-    items: items.map(({ stockQuantity, mouse, keyboard, headphone, setup, mousepad, ...item }) => ({
+    items: items.map(({ mouse, keyboard, headphone, setup, mousepad, ...item }) => ({
       ...item,
-      isInStock: stockQuantity > 0,
+      isInStock: item.stockQuantity > 0,
       detail: mouse || keyboard || headphone || setup || mousepad || null,
     })),
     pagination: {
@@ -360,5 +348,14 @@ export const update = async (id, payload) => {
 export const remove = async (id) => {
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) throw notFound("Không tồn tại sản phẩm!");
+
+  // Sản phẩm đã có trong order_items (FK Restrict) thì xoá sẽ ném lỗi P2003 →
+  // trả về 400 thân thiện cho admin UI thay vì 500 "lỗi máy chủ".
+  const linked = await prisma.orderItem.findFirst({
+    where: { productId: id },
+    select: { id: true },
+  });
+  if (linked) throw badRequest("Sản phẩm đã có trong đơn hàng, không thể xoá!");
+
   return prisma.product.delete({ where: { id } });
 };

@@ -10,11 +10,11 @@ Tính năng:
 
 Cách chạy:
     # 1. Chế độ nhập tương tác trực quan:
-    python fp_growth/test.py
+    python -m src.algorithms.fp_growth.demo
 
     # 2. Truyền tham số Product ID trực tiếp:
-    python fp_growth/test.py --ids 1
-    python fp_growth/test.py --ids 15 290 --top 5
+    python -m src.algorithms.fp_growth.demo --ids 1
+    python -m src.algorithms.fp_growth.demo --ids 15 290 --top 5
 """
 
 from __future__ import annotations

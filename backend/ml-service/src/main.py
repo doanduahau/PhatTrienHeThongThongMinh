@@ -2,9 +2,9 @@
 
 Chạy từ thư mục ``backend/ml-service``::
 
-    .\\venv\\Scripts\\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
+    .\\venv\\Scripts\\python.exe -m uvicorn src.main:app --host localhost --port 8000 --reload
 
-Service chỉ nên bind 127.0.0.1 và được gọi nội bộ từ backend.
+Service chỉ nên bind localhost và được gọi nội bộ từ backend.
 """
 
 from __future__ import annotations

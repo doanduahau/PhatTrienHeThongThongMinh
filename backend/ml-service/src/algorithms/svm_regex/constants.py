@@ -397,9 +397,6 @@ INTENT_CODES: dict[str, str] = {
     "ngoai_pham_vi": "NV",
 }
 
-# Alias tương thích với các module cũ.
-INTENTS = ALL_INTENTS
-SOFT_TAGS = ALL_SOFT_TAGS
 
 
 # ---------------------------------------------------------------------------

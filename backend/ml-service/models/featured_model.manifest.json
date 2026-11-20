@@ -1,0 +1,37 @@
+{
+  "version": "20261120155409",
+  "trained_at": "2026-11-20T15:54:09.973659+00:00",
+  "source": "train.py",
+  "metrics": {
+    "data_source": "db",
+    "samples": 405,
+    "features": [
+      "rating",
+      "rating_count",
+      "positive_ratio",
+      "sold_count"
+    ],
+    "label_source": "demo_rule_v1",
+    "label_policy": "demo_v1: rating >= 4.2 AND positive_ratio >= 0.75 AND (rating_count >= 3 OR delivered_units >= 3); rule-generated labels, not independently observed popularity",
+    "label_counts": {
+      "0": 240,
+      "1": 165
+    },
+    "delivered_units": 0,
+    "constant_features": [
+      "sold_count"
+    ],
+    "validation_note": "Holdout measures agreement with supplied labels; demo labels do not validate real-world popularity.",
+    "holdout_label_agreement": 1.0,
+    "holdout_samples": 81,
+    "tree_depth": 3,
+    "tree_leaves": 4,
+    "feature_importances": {
+      "rating": 0.4951402181871109,
+      "rating_count": 0.3864886263346498,
+      "positive_ratio": 0.11837115547823923,
+      "sold_count": 0.0
+    },
+    "tree_rules": "|--- rating <= 4.10\n|   |--- class: 0\n|--- rating >  4.10\n|   |--- rating_count <= 2.50\n|   |   |--- class: 0\n|   |--- rating_count >  2.50\n|   |   |--- positive_ratio <= 0.71\n|   |   |   |--- class: 0\n|   |   |--- positive_ratio >  0.71\n|   |   |   |--- class: 1\n"
+  }
+}

@@ -5,6 +5,7 @@ import {
   productIdParamSchema,
   createReviewSchema,
   reviewQuerySchema,
+  adminRemoveReviewParamsSchema,
 } from "../validators/review.validator.js";
 
 export const createOrUpdate = async (req, res) => {
@@ -53,6 +54,21 @@ export const removeReview = async (req, res) => {
 
   try {
     const data = await reviewService.removeReview(req.user.id, params.data.id);
+    return sendSuccess(res, data, "Xoá nhận xét thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Xoá nhận xét thất bại!");
+  }
+};
+
+/** Admin xoá nhận xét theo sản phẩm (moderation). */
+export const removeReviewByAdmin = async (req, res) => {
+  const validation = validateInput(adminRemoveReviewParamsSchema, req.params);
+  if (!validation.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", validation.errors, 400);
+  }
+
+  try {
+    const data = await reviewService.removeReviewByAdmin(validation.data);
     return sendSuccess(res, data, "Xoá nhận xét thành công!");
   } catch (error) {
     return sendAppError(res, error, "Xoá nhận xét thất bại!");

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .constants import SOFT_TAGS
+from .constants import ALL_SOFT_TAGS
 from .text_utils import fold_vietnamese
 
 # Tat ca pattern deu viet tren van ban da bo dau (fold_vietnamese).
@@ -441,16 +441,16 @@ _COMPILED: dict[str, list[re.Pattern[str]]] = {
 }
 
 # Kiem tra moi tag deu co rule (tranh quen khai bao)
-_missing = [tag for tag in SOFT_TAGS if tag not in _COMPILED]
+_missing = [tag for tag in ALL_SOFT_TAGS if tag not in _COMPILED]
 assert not _missing, f"Thieu rule cho tag: {_missing}"
 
 
 def extract_soft_tags(text: str) -> list[str]:
-    """Tra ve danh sach tag (theo thu tu khai bao trong SOFT_TAGS)."""
+    """Tra ve danh sach tag (theo thu tu khai bao trong ALL_SOFT_TAGS)."""
     folded = fold_vietnamese(text)
     found = {
         tag
-        for tag in SOFT_TAGS
+        for tag in ALL_SOFT_TAGS
         if any(pattern.search(folded) for pattern in _COMPILED[tag])
     }
 
@@ -475,4 +475,4 @@ def extract_soft_tags(text: str) -> list[str]:
             found.add("sieu_nhe_under_60g")
             break
 
-    return [tag for tag in SOFT_TAGS if tag in found]
+    return [tag for tag in ALL_SOFT_TAGS if tag in found]

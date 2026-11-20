@@ -5,24 +5,28 @@ Tính năng:
     - Trả nhãn (Intent SVM: tim_kiem_san_pham / ngoai_pham_vi, độ tự tin %).
     - Trả query & điều kiện trích xuất (Ràng buộc cứng regex: giá, danh mục, kết nối... và soft tags: 42 thuộc tính).
     - Trả thông tin cá nhân hóa (Personalized K-Means / User profile) nếu cung cấp User ID.
-    - Trả danh sách sản phẩm thực tế phù hợp từ Database Supabase (hoặc fallback bộ dữ liệu sản phẩm).
+    - Lấy sản phẩm qua business service, dùng cùng luồng tìm kiếm với giao diện.
 
 Cách chạy:
     # 1. Chế độ nhập tương tác trực quan:
-    python svm_regex/test.py
+    python -m src.algorithms.svm_regex.demo
 
     # 2. Truyền tham số câu query và user id trực tiếp:
-    python svm_regex/test.py --query "tìm chuột không dây siêu nhẹ claw grip dưới 2 triệu"
-    python svm_regex/test.py --query "chuột gaming dưới 1 triệu" --user 1
-    python svm_regex/test.py --query "thời tiết hà nội hôm nay"
+    python -m src.algorithms.svm_regex.demo --query "tìm chuột không dây siêu nhẹ claw grip dưới 2 triệu"
+    python -m src.algorithms.svm_regex.demo --query "chuột gaming dưới 1 triệu" --user 1
+    python -m src.algorithms.svm_regex.demo --query "thời tiết hà nội hôm nay"
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import warnings
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 warnings.filterwarnings("ignore")
 
@@ -30,7 +34,6 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 
 from src.algorithms.svm_regex.search_engine import SmartSearchEngine
 from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
-from src.algorithms.cosine.model import SimilarProductsRecommender
 
 
 def format_vnd(amount: float) -> str:
@@ -111,8 +114,8 @@ def test_smart_search_visual(
     print(f"   • Độ tự tin (Score)   : {confidence * 100:.2f}%")
     print(f"   • Kích hoạt tìm SP    : {'CÓ (Cho phép truy vấn dữ liệu sản phẩm)' if should_query else 'KHÔNG (Bỏ qua, không gọi DB)'}")
 
-    # 3. HIỂN THỊ PHẦN 2: TRẢ QUERY & ĐIỀU KIỆN TRÍCH XUẤT (PARSED QUERY & SQL QUERY)
-    print("\n⚙️  [2] TRẢ QUERY & RÀNG BUỘC BÓC TÁCH (PARSED QUERY & SQL):")
+    # 3. Hiển thị dữ liệu parse để business service tạo bộ lọc.
+    print("\n⚙️  [2] TRẢ QUERY & RÀNG BUỘC BÓC TÁCH:")
     active_constraints = {k: v for k, v in hard_rules.items() if v not in (None, False, [])}
     
     print(f"   • Chuỗi chuẩn hóa     : \"{analysis['query']}\"")
@@ -139,18 +142,6 @@ def test_smart_search_visual(
     else:
         print("   • Thuộc tính mềm (Soft tags) : (Không phát hiện)")
 
-    # In câu SQL Query thực tế được sinh ra để kiểm tra
-    if should_query:
-        from src.db.repository import build_smart_search_sql
-        _, _, readable_sql = build_smart_search_sql(hard_rules, soft_tags, raw_query=query, limit=top_products)
-        print("   • Câu lệnh SQL Query sinh ra để truy vấn DB:")
-        print("     ┌" + "─" * 68)
-        for line in readable_sql.splitlines():
-            print(f"     │ \033[96m{line}\033[0m")
-        print("     └" + "─" * 68)
-    else:
-        print("   • Câu lệnh SQL Query  : (Không sinh SQL vì câu nằm ngoài phạm vi tìm kiếm)")
-
     # 4. HIỂN THỊ PHẦN 3: TRẢ CÁ NHÂN HÓA (NẾU CÓ)
     print("\n👤 [3] TRẢ THÔNG TIN CÁ NHÂN HÓA (PERSONALIZED CONTEXT):")
     user_info = get_personalized_info(user_id)
@@ -172,48 +163,17 @@ def test_smart_search_visual(
         print("═" * 75 + "\n")
         return
 
-    # Thực hiện truy vấn vào database (hoặc fallback sang cosine.csv nếu offline)
     products: list[dict[str, Any]] = []
-    source_used = "PostgreSQL Supabase"
+    base_url = os.getenv("BUSINESS_SERVICE_URL", "http://localhost:5000").rstrip("/")
+    params = urlencode({"q": query, "limit": min(top_products, 100)})
+    source_used = "business service"
     try:
-        search_res = engine.search_in_db(query, limit=top_products)
-        products = search_res.get("products", [])
-    except Exception as e:
-        source_used = "Offline Dataset (data/cosine.csv fallback)"
-        # Fallback đọc từ data/cosine.csv
-        try:
-            csv_path = ROOT_DIR / "data" / "cosine.csv"
-            import pandas as pd
-            df = pd.read_csv(csv_path)
-            # Lọc sơ bộ theo danh mục nếu có
-            cat = hard_rules.get("category")
-            if cat:
-                cat_map = {"chuot": "Chuột", "ban_phim": "Bàn phím", "tai_nghe": "Tai nghe", "lot_chuot": "Lót chuột"}
-                mapped = cat_map.get(cat, "")
-                if mapped:
-                    df = df[df["category"].str.contains(mapped, case=False, na=False)]
-            brands = hard_rules.get("brands", [])
-            if brands:
-                pattern_b = "|".join(brands)
-                df = df[df["brand"].str.contains(pattern_b, case=False, na=False) | df["name"].str.contains(pattern_b, case=False, na=False)]
-            max_p = hard_rules.get("max_price")
-            if max_p:
-                df = df[df["price"] <= max_p]
-            min_p = hard_rules.get("min_price")
-            if min_p:
-                df = df[df["price"] >= min_p]
-            for _, r in df.head(top_products).iterrows():
-                products.append({
-                    "id": r["product_id"],
-                    "name": r["name"],
-                    "brand": r.get("brand", ""),
-                    "category_name": r.get("category", ""),
-                    "price": float(r.get("price", 0)),
-                    "rating": float(r.get("rating", 5.0)),
-                    "connectivity": r.get("specs", ""),
-                })
-        except Exception:
-            products = []
+        with urlopen(f"{base_url}/api/products/search/smart?{params}", timeout=10) as response:
+            result = json.load(response)["data"]
+        products = result["items"]
+        source_used = f"business service ({result['source']})"
+    except Exception as exc:
+        print(f"   Business service unavailable: {exc}")
 
     print(f"   (Nguồn dữ liệu: {source_used} | Tìm thấy: {len(products)} sản phẩm)")
     if not products:
@@ -223,8 +183,10 @@ def test_smart_search_visual(
         for idx, p in enumerate(products, start=1):
             pid = p.get("id") or p.get("product_id")
             name = p.get("name", "N/A")
-            brand = p.get("brand", "N/A")
-            cat_name = p.get("category_name", p.get("category", "N/A"))
+            brand = p.get("brand", {})
+            brand = brand.get("name", "N/A") if isinstance(brand, dict) else brand
+            cat_name = p.get("category", {})
+            cat_name = cat_name.get("name", "N/A") if isinstance(cat_name, dict) else cat_name
             price_str = format_vnd(p.get("price", 0))
             rating = p.get("rating", 0)
             conn = p.get("connectivity", "")

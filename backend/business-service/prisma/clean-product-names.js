@@ -1,11 +1,16 @@
 /**
  * Cắt các từ thuộc tính thừa khỏi products.name khi chính dòng sản phẩm đó đã có
- * cột chứa cùng giá trị (mice.connectivity, keyboards.layout, mousepads.size...).
- * Một token chỉ bị xoá khi cột của đúng sản phẩm đó nói lên nó — không xoá theo mẫu tên.
+ * cột chứa cùng giá trị (mice.connectivity, keyboards.layout, mousepads.size,
+ * products.color...). Một token chỉ bị xoá khi cột của đúng sản phẩm đó nói lên
+ * nó — không xoá theo mẫu tên.
+ *
+ * Màu: products.color đã được UI hiển thị bằng chấm màu (ColorDot) nên tên chỉ
+ * cần giữ tên riêng của sản phẩm. Chỉ cắt từ màu khi nhóm màu của nó khớp với
+ * giá trị products.color, hoặc từ đó xuất hiện nguyên văn trong products.color.
  *
  *   node prisma/clean-product-names.js            # dry-run, không sửa DB
  *   node prisma/clean-product-names.js --apply    # backup + ghi DB
- *   node prisma/clean-names-rollback.js           # khôi phục từ backup
+ *   node prisma/rollback-names.js                 # khôi phục từ backup
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -63,6 +68,90 @@ const PAD_SURFACE_WORDS = {
   hybrid: ["\\bhybrid\\b"],
 };
 
+// Từ chỉ màu -> nhóm màu. "xanh" tiếng Việt vừa xanh lá vừa xanh dương nên thuộc cả hai nhóm.
+const COLOR_TERM_FAMILIES = new Map();
+const registerColors = (families, terms) => {
+  for (const term of terms) COLOR_TERM_FAMILIES.set(term, families);
+};
+registerColors(["black"], ["black", "đen", "onyx", "obsidian", "basalt", "charcoal", "graphite", "carbon", "ash", "blackout", "midnight", "eclipse"]);
+registerColors(["white"], ["white", "trắng", "polar", "snow", "mercury", "moonlight", "ionic", "shell", "frost", "ghost", "pearl", "ivory"]);
+registerColors(["gray"], ["gray", "grey", "xám", "ghi", "gunmetal", "titanium", "titan", "slate", "cement", "space", "cool", "pale"]);
+registerColors(["red"], ["red", "đỏ", "ruby", "crimson", "scarlet", "rouge"]);
+registerColors(["orange"], ["orange", "cam", "sunset"]);
+registerColors(["yellow"], ["yellow", "vàng", "gold", "golden"]);
+registerColors(["blue", "green"], ["xanh"]);
+registerColors(["green"], ["green", "mint", "matcha", "olive", "forest"]);
+registerColors(["blue"], ["blue", "dương", "navy", "cobalt", "azure"]);
+registerColors(["cyan"], ["cyan", "teal", "turquoise"]);
+registerColors(["pink"], ["pink", "hồng", "magenta", "rose", "quartz"]);
+registerColors(["purple"], ["purple", "tím", "lavender", "violet"]);
+registerColors(["brown"], ["brown", "nâu", "walnut", "oak", "wood"]);
+registerColors(["beige"], ["beige", "kem", "cream", "sand"]);
+registerColors(["silver"], ["silver", "bạc", "anodized", "polished", "chrome", "platinum"]);
+registerColors(["transparent", "blue", "white", "black"], ["transparent", "clear", "crystal"]);
+registerColors(["transparent"], ["trong"]);
+registerColors(["black", "white", "gray"], ["matte"]);
+
+const COLORWAY_CONNECTORS = new Set(["on", "in", "and", "&", "và"]);
+// Chất liệu, không phải màu — đừng xoá dù nó nằm trong products.color.
+const NON_COLOR_TOKENS = new Set(["plastic", "aluminum", "aluminium", "metal", "steel", "glass", "mesh", "leather", "fabric"]);
+// "Red Switch"/"Silent Red" là tên switch, không phải màu của sản phẩm.
+const SWITCH_AFTER = /^[\s,]*(switch|switches|linear|tactile|clicky|optical|magnetic|hot-?swap)\b/i;
+const SWITCH_BEFORE = /(?:silent|holy|panda)[\s-]*$/i;
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Nhóm màu + từ vựng được phép cắt cho một giá trị products.color. */
+function colorPlan(color) {
+  const words = String(color ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  const literal = new Set(words.filter((word) => !NON_COLOR_TOKENS.has(word)));
+  const families = new Set();
+  for (const word of literal) for (const family of COLOR_TERM_FAMILIES.get(word) ?? []) families.add(family);
+
+  const allowed = new Set(literal);
+  for (const [term, termFamilies] of COLOR_TERM_FAMILIES) {
+    if (termFamilies.some((family) => families.has(family))) allowed.add(term);
+  }
+
+  const matches = (word) =>
+    literal.has(word) || Boolean(COLOR_TERM_FAMILIES.get(word)?.some((family) => families.has(family)));
+
+  return { allowed, matches };
+}
+
+/** Bỏ màu khỏi tên: cụm colorway trước ("Blue on White"), rồi từ màu đơn lẻ. */
+function stripColor(name, color) {
+  const plan = colorPlan(color);
+  if (!plan.allowed.size) return { name, removed: [] };
+  const removed = [];
+
+  // "Blue on White", "Black & Pink": bỏ cả cụm để không còn "on"/"&" treo lại.
+  const connector = /(?<!\S)([\p{L}]+(?:\s+(?:on|in|and|&|và)\s+[\p{L}]+)+)(?!\S)/giu;
+  let out = name.replace(connector, (phrase) => {
+    const words = phrase.toLowerCase().split(/\s+/).filter((word) => word && !COLORWAY_CONNECTORS.has(word));
+    if (words.length < 2) return phrase;
+    if (!words.every((word) => COLOR_TERM_FAMILIES.has(word))) return phrase;
+    if (!words.some((word) => plan.matches(word))) return phrase;
+    removed.push(`colorway:${words.join(" ")}`);
+    return " ";
+  });
+
+  const source = [...plan.allowed]
+    .sort((a, b) => b.length - a.length)
+    .map((term) => escapeRegExp(term).replace(/\s+/g, "\\s+"))
+    .join("|");
+  // (?<!\S)/(?!\S) chỉ khớp từ đứng riêng: bảo vệ "BlackWidow", "Zero:RED", "G-SR-SE".
+  const word = new RegExp(`(?<!\\S)(${source})(\\s+edition)?(?!\\S)`, "giu");
+  out = out.replace(word, (match, term, edition, offset, whole) => {
+    if (SWITCH_AFTER.test(whole.slice(offset + match.length))) return match;
+    if (SWITCH_BEFORE.test(whole.slice(0, offset))) return match;
+    removed.push(`color:${term.toLowerCase()}${edition ? "+edition" : ""}`);
+    return " ";
+  });
+
+  return { name: out, removed };
+}
+
 const collapse = (value) =>
   value
     .replace(/\(\s*\)/g, " ")
@@ -109,7 +198,7 @@ function cleanName(row) {
   const prefixed = stripTypePrefix(row.name, row.slug);
   const prefixLabel = prefixed.prefix ? `tiền từ: "${prefixed.prefix}"` : null;
 
-  const cutAttributes = (start, removed) => {
+  const cutAttributes = (start, removed, stripAttributes = true) => {
     let out = start;
     // Lookaround tự áp cho mọi token: "4K/8K" là một cụm polling kép, cắt "4K" sẽ ra "/8K".
     const cut = (source, label, flags = "gi") => {
@@ -119,45 +208,62 @@ function cleanName(row) {
       removed.push(`${source}=${label}`);
     };
 
-  if (GEAR_CATEGORIES.has(row.slug)) {
-    for (const token of CONNECTIVITY_WORDS[row.conn] ?? []) {
-      cut(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), row.conn);
+    if (stripAttributes) {
+      if (GEAR_CATEGORIES.has(row.slug)) {
+        for (const token of CONNECTIVITY_WORDS[row.conn] ?? []) {
+          cut(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), row.conn);
+        }
+      }
+
+      if (POLLING_CATEGORIES.has(row.slug) && row.polling) {
+        for (const [source, hz] of POLLING_WORDS) if (hz === row.polling) cut(source, `${hz}Hz`);
+      }
+
+      if (row.slug === "ban-phim") {
+        for (const source of LAYOUT_WORDS[row.layout] ?? []) cut(source, row.layout);
+        if (row.rapid) cut("\\s*\\brapid[\\s-]?trigger\\b", "rapid-trigger=true");
+        if (row.hotswap) cut("\\s*\\bhot[\\s-]?(swap ready|swap|swappable)\\b", "hotswap=true");
+      }
+
+      // "Ergonomic" chỉ là thuộc tính ở chuột; ở ghế nó là kind-of sản phẩm.
+      if (row.slug === "chuot" && row.hand === "ergonomic") cut("\\s*\\bergonomic\\b", "hand=ergonomic");
+
+      if (row.slug === "lot-chuot") {
+        for (const source of PAD_SIZE_WORDS[row.padSize] ?? []) cut(source, `size=${row.padSize}`);
+        for (const source of PAD_SURFACE_WORDS[row.padSurface] ?? []) cut(source, `surface=${row.padSurface}`);
+      }
+
+      // Ghế: "Ergonomic Chair" là tên loại. Cắt cả cụm, cắt rời "Chair" sẽ để tính từ treo
+      // ("Steelcase Gesture Ergonomic"). Bàn/arm/phụ kiện thì từ loại nằm trong tên model nên giữ.
+      if (row.slug === "ghe") {
+        cut("\\s*\\bergonomic\\s+chair\\b", "loai:ghe");
+        cut("\\s*\\bchair\\b", "loai:ghe");
+      }
     }
-  }
 
-  if (POLLING_CATEGORIES.has(row.slug) && row.polling) {
-    for (const [source, hz] of POLLING_WORDS) if (hz === row.polling) cut(source, `${hz}Hz`);
-  }
-
-  if (row.slug === "ban-phim") {
-    for (const source of LAYOUT_WORDS[row.layout] ?? []) cut(source, row.layout);
-    if (row.rapid) cut("\\s*\\brapid[\\s-]?trigger\\b", "rapid-trigger=true");
-    if (row.hotswap) cut("\\s*\\bhot[\\s-]?(swap ready|swap|swappable)\\b", "hotswap=true");
-  }
-
-  // "Ergonomic" chỉ là thuộc tính ở chuột; ở ghế nó là kind-of sản phẩm.
-  if (row.slug === "chuot" && row.hand === "ergonomic") cut("\\s*\\bergonomic\\b", "hand=ergonomic");
-
-  if (row.slug === "lot-chuot") {
-    for (const source of PAD_SIZE_WORDS[row.padSize] ?? []) cut(source, `size=${row.padSize}`);
-    for (const source of PAD_SURFACE_WORDS[row.padSurface] ?? []) cut(source, `surface=${row.padSurface}`);
-  }
-
-  // Ghế: "Ergonomic Chair" là tên loại. Cắt cả cụm, cắt rời "Chair" sẽ để tính từ treo
-  // ("Steelcase Gesture Ergonomic"). Bàn/arm/phụ kiện thì từ loại nằm trong tên model nên giữ.
-  if (row.slug === "ghe") {
-    cut("\\s*\\bergonomic\\s+chair\\b", "loai:ghe");
-    cut("\\s*\\bchair\\b", "loai:ghe");
-  }
+    // Màu đã có cột products.color + chấm màu trên UI -> tên chỉ giữ tên riêng.
+    if (row.color) {
+      const colored = stripColor(out, row.color);
+      out = colored.name;
+      removed.push(...colored.removed);
+    }
 
     return collapse(out);
   };
 
-  const removed = [];
-  const stripped = cutAttributes(prefixed.name, removed);
+  const fullRemoved = [];
+  const fullName = cutAttributes(prefixed.name, fullRemoved, true);
+  const colorRemoved = [];
+  const colorName = cutAttributes(prefixed.name, colorRemoved, false);
   const candidates = [];
-  if (prefixLabel) removed.unshift(prefixLabel);
-  if (removed.length && stripped) candidates.push({ name: stripped, removed });
+  if (prefixLabel) fullRemoved.unshift(prefixLabel);
+  if (prefixLabel) colorRemoved.unshift(prefixLabel);
+  if (fullRemoved.length && fullName) candidates.push({ name: fullName, removed: fullRemoved });
+  // Nếu bản cắt đầy đủ đụng tên SKU khác thì chỉ cắt màu, giữ lại từ phân biệt
+  // (Wireless/TKL/Fullsize...) để hai SKU không bị gộp làm một.
+  if (colorRemoved.length && colorName && colorName !== fullName) {
+    candidates.push({ name: colorName, removed: colorRemoved });
+  }
   if (prefixLabel) candidates.push({ name: collapse(prefixed.name), removed: [prefixLabel] });
   return candidates;
 }
@@ -166,6 +272,7 @@ async function loadRows() {
   const rows = await prisma.$queryRaw`
     SELECT p.id,
            p.name,
+           p.color,
            c.slug,
            COALESCE(m.connectivity, k.connectivity, h.connectivity) AS conn,
            m.hand_orientation AS hand,
@@ -198,28 +305,48 @@ const main = async () => {
   });
 
   const norm = (value) => value.toLowerCase().trim();
-  // Ngoặc lẻ hoặc dấu câu treo lại là cắt hỏng tên — thà giữ tên cũ.
+  // Sản phẩm cùng tên nhưng khác màu là 2 SKU hợp lệ (G304 Đen / G304 Trắng), nên
+  // khoá chống trùng gồm cả màu. Cùng tên + cùng màu mới là trùng thật.
+  const keyOf = (p) => `${norm(p.best ? p.best.name : p.row.name)}|${norm(p.row.color ?? "")}`;
+  // Ngoặc lẻ hoặc dấu câu/giới từ treo lại là cắt hỏng tên — thà giữ tên cũ.
   const mangled = (name) =>
-    (name.match(/\(/g) ?? []).length !== (name.match(/\)/g) ?? []).length || /[(),;:/-]$/.test(name);
+    (name.match(/\(/g) ?? []).length !== (name.match(/\)/g) ?? []).length ||
+    /[(),;:/&-]$/.test(name) ||
+    /\b(on|in|with|and|và|of)$/i.test(name);
 
   // Chốt chặn trùng tên: "Rival 3" bản dây và "Rival 3 Wireless" là hai SKU thật.
   // Mỗi lượt đếm lại, phương án đụng độ tụt về phương án nhẹ hơn, hết phương án thì giữ nguyên.
-  for (let pass = 0; pass < 6; pass += 1) {
+  for (let pass = 0; pass < 8; pass += 1) {
     const used = new Map();
     for (const p of picks) {
-      const key = norm(p.best ? p.best.name : p.row.name);
+      const key = keyOf(p);
       used.set(key, (used.get(key) ?? 0) + 1);
     }
+    const clashing = picks.filter(
+      (p) => p.best && ((used.get(keyOf(p)) ?? 0) > 1 || mangled(p.best.name)),
+    );
+    if (!clashing.length) break;
     let moved = false;
-    for (const p of picks) {
-      if (!p.best) continue;
-      const clashes = (used.get(norm(p.best.name)) ?? 0) > 1 || mangled(p.best.name);
-      if (!clashes) continue;
+    for (const p of clashing) {
       const next = p.cands[p.cands.indexOf(p.best) + 1] ?? null;
+      if (!next) continue;
       p.best = next;
       moved = true;
     }
-    if (!moved) break;
+    // Không còn phương án nhẹ hơn cho nhóm đang đụng nhau -> giữ tên cũ cho nhóm đó.
+    if (!moved) {
+      for (const p of clashing) {
+        // Trùng với một dòng vốn đã sạch tên + cùng màu (bản ghi sản phẩm trùng nhau)
+        // thì cứ bỏ màu; chỉ chặn khi từ bị cắt là thuộc tính phân biệt SKU.
+        const onlyColor = p.best.removed.every(
+          (label) => label.startsWith("color:") || label.startsWith("colorway:"),
+        );
+        const key = keyOf(p);
+        const same = picks.filter((other) => other !== p && keyOf(other) === key);
+        if (!onlyColor || same.some((other) => other.best)) p.best = null;
+      }
+      break;
+    }
   }
 
   const changes = picks.filter((p) => p.best && p.best.name !== p.row.name);

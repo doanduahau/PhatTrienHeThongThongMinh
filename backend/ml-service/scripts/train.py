@@ -11,6 +11,7 @@ Cách sử dụng (chạy từ thư mục ``backend/ml-service``):
     .\\venv\\Scripts\\python.exe scripts\\train.py --model fp_growth
     .\\venv\\Scripts\\python.exe scripts\\train.py --model kmeans
     .\\venv\\Scripts\\python.exe scripts\\train.py --model svm
+    .\\venv\\Scripts\\python.exe scripts\\train.py --model featured --source db
 
     # Huấn luyện từ CSDL Supabase (khi đã cấu hình .env / DB):
     .\\venv\\Scripts\\python.exe scripts\\train.py --source db
@@ -53,7 +54,7 @@ def _write_manifest(model_path: Path, metrics: dict | None = None) -> Path:
 def train_cosine(source: str = "csv") -> None:
     """Huấn luyện mô hình Cosine Similarity (Sản phẩm tương tự)."""
     print("\n" + "=" * 60)
-    print("▶ [1/4] HUẤN LUYỆN: Cosine Similarity (Sản phẩm tương tự)")
+    print("▶ [1/5] HUẤN LUYỆN: Cosine Similarity (Sản phẩm tương tự)")
     print("=" * 60)
     from src.algorithms.cosine.model import SimilarProductsRecommender
 
@@ -85,7 +86,7 @@ def train_cosine(source: str = "csv") -> None:
 def train_fp_growth(source: str = "csv") -> None:
     """Huấn luyện mô hình FP-Growth (Sản phẩm thường mua kèm)."""
     print("\n" + "=" * 60)
-    print("▶ [2/4] HUẤN LUYỆN: FP-Growth (Thường mua kèm)")
+    print("▶ [2/5] HUẤN LUYỆN: FP-Growth (Thường mua kèm)")
     print("=" * 60)
     from src.algorithms.fp_growth.model import FPGrowthRecommender
 
@@ -125,7 +126,7 @@ def train_fp_growth(source: str = "csv") -> None:
 def train_kmeans(source: str = "csv") -> None:
     """Huấn luyện mô hình Cosine + K-Means (Gợi ý cá nhân hóa)."""
     print("\n" + "=" * 60)
-    print("▶ [3/4] HUẤN LUYỆN: Cosine + K-Means (Gợi ý cho bạn)")
+    print("▶ [3/5] HUẤN LUYỆN: Cosine + K-Means (Gợi ý cho bạn)")
     print("=" * 60)
     from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
 
@@ -175,7 +176,7 @@ def train_kmeans(source: str = "csv") -> None:
 def train_svm(source: str = "csv") -> None:
     """Huấn luyện mô hình LinearSVC + TF-IDF (Phân loại intent tìm kiếm thông minh)."""
     print("\n" + "=" * 60)
-    print("▶ [4/4] HUẤN LUYỆN: LinearSVC + TF-IDF (Tìm kiếm thông minh)")
+    print("▶ [4/5] HUẤN LUYỆN: LinearSVC + TF-IDF (Tìm kiếm thông minh)")
     print("=" * 60)
     from src.algorithms.svm_regex.intent_classifier import IntentClassifier
 
@@ -204,11 +205,77 @@ def train_svm(source: str = "csv") -> None:
         print(f"    -> '{q}' => Intent: {pred['intent']} (Confidence: {pred['confidence']})")
 
 
+def train_featured(source: str = "db") -> None:
+    """Train cây quyết định với dữ liệu hiện có, không tạo đơn hàng giả."""
+    from sklearn.metrics import accuracy_score
+    from sklearn.model_selection import train_test_split
+    from sklearn.tree import export_text
+
+    from src.algorithms.decision_tree.ranking import (
+        DEMO_LABEL_POLICY, FEATURE_COLUMNS, FeaturedProductsRanker, feature_frame, make_demo_labels,
+    )
+
+    print("\n[5/5] HUAN LUYEN: Decision Tree - San pham noi bat")
+    csv_path = DATA_DIR / "featured.csv"
+    if source == "db":
+        from src.db.repository import fetch_featured_products_df
+
+        df = fetch_featured_products_df()
+    else:
+        df = pd.read_csv(csv_path)
+
+    if df.empty:
+        raise ValueError("Không có sản phẩm để train model nổi bật.")
+    if source == "db" or "featured_label" not in df:
+        df["featured_label"] = make_demo_labels(df)
+        df["label_source"] = "demo_rule_v1"
+    # Nhãn chỉ nằm trong CSV huấn luyện, không ghi ngược vào database.
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    df.to_csv(csv_path, index=False, encoding="utf-8")
+    df = pd.read_csv(csv_path)
+    labels = df["featured_label"].astype(int)
+    counts = labels.value_counts()
+    if set(counts.index) != {0, 1}:
+        raise ValueError("Cần đủ nhãn Nổi bật (1) và Bình thường (0); không tự tạo thêm dữ liệu.")
+
+    label_source = ",".join(sorted(df.get("label_source", pd.Series(["csv_supplied"])).astype(str).unique()))
+    metrics = {
+        "data_source": source,
+        "samples": len(df),
+        "features": list(FEATURE_COLUMNS),
+        "label_source": label_source,
+        "label_policy": DEMO_LABEL_POLICY if label_source == "demo_rule_v1" else "featured_label supplied in CSV",
+        "label_counts": {str(k): int(v) for k, v in counts.items()},
+        "delivered_units": int(df["sold_count"].sum()),
+        "constant_features": [col for col in FEATURE_COLUMNS if df[col].nunique() <= 1],
+        "validation_note": "Holdout measures agreement with supplied labels; demo labels do not validate real-world popularity.",
+    }
+    if len(df) >= 10 and counts.min() >= 2:
+        train_df, test_df = train_test_split(df, test_size=0.2, stratify=labels, random_state=42)
+        trial = FeaturedProductsRanker().fit(train_df, train_df["featured_label"])
+        prediction = trial.classifier.predict(feature_frame(test_df))
+        metrics["holdout_label_agreement"] = round(float(accuracy_score(test_df["featured_label"], prediction)), 4)
+        metrics["holdout_samples"] = len(test_df)
+
+    ranker = FeaturedProductsRanker().fit(df, labels)
+    metrics["tree_depth"] = int(ranker.classifier.get_depth())
+    metrics["tree_leaves"] = int(ranker.classifier.get_n_leaves())
+    metrics["feature_importances"] = dict(zip(FEATURE_COLUMNS, map(float, ranker.classifier.feature_importances_)))
+    metrics["tree_rules"] = export_text(ranker.classifier, feature_names=list(FEATURE_COLUMNS))
+    save_path = MODELS_DIR / "featured_model.joblib"
+    ranker.save(save_path)
+    _write_manifest(save_path, metrics)
+    print(json.dumps({k: v for k, v in metrics.items() if k != "tree_rules"}, ensure_ascii=False, indent=2))
+    print(f"Model: {save_path}")
+    print(f"Training snapshot: {csv_path}")
+    print(metrics["tree_rules"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Chương trình huấn luyện các mô hình AI Phụ Kiện Máy Tính")
     parser.add_argument(
         "--model",
-        choices=["all", "cosine", "fp_growth", "kmeans", "svm"],
+        choices=["all", "cosine", "fp_growth", "kmeans", "svm", "featured"],
         default="all",
         help="Chọn mô hình cần huấn luyện (mặc định: 'all')",
     )
@@ -237,6 +304,9 @@ def main() -> None:
 
         if args.model in ("all", "svm"):
             train_svm(args.source)
+
+        if args.model in ("all", "featured"):
+            train_featured(args.source)
 
         print("\n" + "🎉 " * 15)
         print("TẤT CẢ CÁC MÔ HÌNH ĐÃ ĐƯỢC HUẤN LUYỆN VÀ LƯU THÀNH CÔNG!")

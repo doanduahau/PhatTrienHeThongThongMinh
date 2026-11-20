@@ -80,6 +80,20 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+export const getOrderDetail = async (req, res) => {
+  const params = validateInput(orderIdParamSchema, req.params);
+  if (!params.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", params.errors, 400);
+  }
+
+  try {
+    const data = await orderService.getOrderDetail(params.data.id);
+    return sendSuccess(res, data, "Lấy chi tiết đơn hàng thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Lấy chi tiết đơn hàng thất bại!");
+  }
+};
+
 export const updateStatus = async (req, res) => {
   const params = validateInput(orderIdParamSchema, req.params);
   if (!params.success) {

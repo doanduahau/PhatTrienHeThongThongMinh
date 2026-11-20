@@ -56,7 +56,19 @@ def _load_search(path: Path) -> Any:
     return SmartSearchEngine(path)
 
 
+def _load_featured(path: Path) -> Any:
+    from src.algorithms.decision_tree.ranking import FeaturedProductsRanker
+
+    return FeaturedProductsRanker.load(path)
+
+
 MODEL_SPECS: tuple[ModelSpec, ...] = (
+    ModelSpec(
+        key="featured",
+        label="Sản phẩm nổi bật (Decision Tree)",
+        path=MODELS_DIR / "featured_model.joblib",
+        loader=_load_featured,
+    ),
     ModelSpec(
         key="similar",
         label="Sản phẩm tương tự (Cosine Similarity)",

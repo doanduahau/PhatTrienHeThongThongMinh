@@ -95,17 +95,6 @@ class IntentClassifier:
             "is_oov": is_oov,
         }
 
-    def predict_top_k(self, text: str, k: int = 3) -> list[dict[str, Any]]:
-        self._ensure_trained()
-        probabilities = self.pipeline.predict_proba([text])[0]
-        order = np.argsort(probabilities)[::-1][: max(1, k)]
-        return [
-            {
-                "intent": str(self.pipeline.classes_[int(i)]),
-                "confidence": round(float(probabilities[int(i)]), 4),
-            }
-            for i in order
-        ]
 
     # ------------------------------------------------------------------
     def save(self, path: str | Path) -> Path:

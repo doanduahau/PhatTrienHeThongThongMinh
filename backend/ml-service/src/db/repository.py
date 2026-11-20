@@ -1,11 +1,12 @@
 """Lớp Repository tương tác trực tiếp với Database PostgreSQL (Supabase).
 
-Cung cấp các hàm truy vấn chuẩn hóa cho cả 5 thuật toán:
+Cung cấp các truy vấn đọc dữ liệu phục vụ train và xếp hạng:
 1. fetch_master_products_df(): Truy vấn toàn bộ 405 sản phẩm JOIN với 5 bảng chi tiết.
 2. fetch_order_transactions(): Truy vấn lịch sử giao dịch từ order_items và cart_items cho FP-Growth.
 3. fetch_user_interactions(): Truy vấn hành vi người dùng (mua, giỏ hàng) cho K-Means + Cosine.
-4. search_products_by_filter(): Truy vấn động theo điều kiện Regex/Intent từ Smart Search.
-5. fetch_featured_products_df(): Truy vấn sản phẩm theo Rating và Lượt bán cho Rating Baseline.
+4. fetch_featured_products_df(): Tổng hợp bốn đặc trưng cho cây quyết định sản phẩm nổi bật.
+
+Smart Search chỉ parse tại ML; business service truy vấn sản phẩm bằng Prisma.
 """
 
 from __future__ import annotations
@@ -15,27 +16,6 @@ from typing import Any
 import pandas as pd
 
 from .config import get_cursor
-
-# Ánh xạ khóa danh mục do Regex bóc tách sang slug thật trong bảng categories.
-# Dùng slug thay vì ID cứng để không lệch khi dữ liệu được seed lại.
-CATEGORY_MAP_VI_TO_SLUG = {
-    "chuot": "chuot",
-    "mouse": "chuot",
-    "tai_nghe": "tai-nghe",
-    "headphone": "tai-nghe",
-    "soundcard": "soundcard",
-    "ban_phim": "ban-phim",
-    "keyboard": "ban-phim",
-    "ghe": "ghe",
-    "chair": "ghe",
-    "ban": "ban",
-    "desk": "ban",
-    "arm": "arm-man-hinh",
-    "phu_kien": "phu-kien-cong-thai-hoc",
-    "lot_chuot": "lot-chuot",
-    "mousepad": "lot-chuot",
-}
-
 
 def fetch_master_products_df() -> pd.DataFrame:
     """Truy vấn bảng sản phẩm tổng hợp JOIN đầy đủ với categories, brands và các bảng chi tiết kỹ thuật."""
@@ -156,193 +136,11 @@ def fetch_user_interactions() -> pd.DataFrame:
     return df
 
 
-def build_smart_search_sql(
-    hard_constraints: dict[str, Any],
-    soft_tags: list[str],
-    raw_query: str = "",
-    limit: int = 20,
-) -> tuple[str, list[Any], str]:
-    """Xây dựng câu truy vấn SQL động, danh sách tham số và bản SQL hiển thị trực quan."""
-    where_clauses = ["1=1"]
-    params: list[Any] = []
-
-    # 1. Danh mục sản phẩm
-    categories = hard_constraints.get("categories", [])
-    if categories:
-        cat_slugs = [
-            CATEGORY_MAP_VI_TO_SLUG[c]
-            for c in categories
-            if c in CATEGORY_MAP_VI_TO_SLUG
-        ]
-        if cat_slugs:
-            where_clauses.append(f"c.slug IN ({','.join(['%s']*len(cat_slugs))})")
-            params.extend(cat_slugs)
-
-    # 2. Thương hiệu (Brand)
-    brands = hard_constraints.get("brands", [])
-    if brands:
-        brand_conds = []
-        for b in brands:
-            brand_conds.append("(b.name ILIKE %s OR p.name ILIKE %s)")
-            params.extend([f"%{b}%", f"%{b}%"])
-        where_clauses.append("(" + " OR ".join(brand_conds) + ")")
-
-    # 2b. Từ khóa model cụ thể (Keyword)
-    keyword = hard_constraints.get("keyword")
-    if keyword:
-        where_clauses.append("p.name ILIKE %s")
-        params.append(f"%{keyword}%")
-
-    # 3. Giá tiền
-    min_price = hard_constraints.get("min_price")
-    if min_price is not None and min_price > 0:
-        where_clauses.append("p.price >= %s")
-        params.append(min_price)
-
-    max_price = hard_constraints.get("max_price")
-    if max_price is not None and max_price > 0:
-        where_clauses.append("p.price <= %s")
-        params.append(max_price)
-
-    # 4. Kết nối (wireless, wired, tri-mode)
-    connectivities = hard_constraints.get("connectivity", [])
-    if "wireless" in connectivities:
-        where_clauses.append("(m.connectivity IN ('wireless', 'tri_mode') OR k.connectivity IN ('wireless', 'tri_mode') OR h.connectivity IN ('wireless_2.4g', 'bluetooth'))")
-    elif "wired" in connectivities:
-        where_clauses.append("(m.connectivity = 'wired' OR k.connectivity = 'wired' OR h.connectivity = 'wired_3.5mm')")
-
-    # 5. Ràng buộc chuột
-    max_weight = hard_constraints.get("max_weight_g")
-    if max_weight:
-        where_clauses.append("m.weight_g <= %s")
-        params.append(max_weight)
-
-    polling = hard_constraints.get("polling_rate_hz")
-    if polling:
-        where_clauses.append("(m.polling_rate_hz >= %s OR k.polling_rate_hz >= %s)")
-        params.extend([polling, polling])
-
-    # 6. Ràng buộc bàn phím
-    if hard_constraints.get("hotswap"):
-        where_clauses.append("k.has_hotswap = true")
-    if hard_constraints.get("mac_support"):
-        where_clauses.append("k.support_macos = true")
-
-    # 7. Ràng buộc tai nghe
-    if hard_constraints.get("has_mic"):
-        where_clauses.append("h.has_mic = true")
-    if hard_constraints.get("noise_cancelling"):
-        where_clauses.append("h.has_anc = true")
-
-    # 8. Áp dụng soft tags ánh xạ sang thuộc tính DB nếu có
-    if "cong_thai_hoc" in soft_tags:
-        where_clauses.append("m.hand_orientation = 'ergonomic'")
-    elif "doi_xung" in soft_tags:
-        where_clauses.append("m.hand_orientation = 'symmetrical'")
-
-    if "sieu_nhe_under_60g" in soft_tags:
-        where_clauses.append("m.weight_g < 60")
-
-    if "rapid_trigger" in soft_tags:
-        where_clauses.append("k.has_rapid_trigger = true")
-
-    if "switch_linear" in soft_tags:
-        where_clauses.append("(k.switch ILIKE '%%Red%%' OR k.switch ILIKE '%%Linear%%' OR k.switch ILIKE '%%Yellow%%' OR k.switch ILIKE '%%Silver%%' OR k.switch ILIKE '%%Magnetic%%')")
-    elif "switch_tactile" in soft_tags:
-        where_clauses.append("(k.switch ILIKE '%%Brown%%' OR k.switch ILIKE '%%Tactile%%' OR k.switch ILIKE '%%Banana%%' OR k.switch ILIKE '%%Purple%%')")
-    elif "switch_clicky" in soft_tags:
-        where_clauses.append("(k.switch ILIKE '%%Blue%%' OR k.switch ILIKE '%%Clicky%%' OR k.switch ILIKE '%%Green%%')")
-
-    if "layout_compact" in soft_tags:
-        where_clauses.append("k.layout IN ('60%%', '65%%', '75%%', 'TKL')")
-    elif "fullsize_nhap_lieu_excel" in soft_tags:
-        where_clauses.append("k.layout = 'Fullsize'")
-
-    if "hot_swap" in soft_tags and not hard_constraints.get("hotswap"):
-        where_clauses.append("k.has_hotswap = true")
-
-    if "layout_mac_chuan" in soft_tags and not hard_constraints.get("mac_support"):
-        where_clauses.append("k.support_macos = true")
-
-    if "iem" in soft_tags:
-        where_clauses.append("h.headphone_type = 'in_ear'")
-    elif "tai_nghe_on_ear_nhe" in soft_tags:
-        where_clauses.append("h.headphone_type = 'on_ear'")
-
-    if "cach_am_tot" in soft_tags and not hard_constraints.get("noise_cancelling"):
-        where_clauses.append("h.has_anc = true")
-
-    if "mic_loc_on_dam_thoai_hop" in soft_tags and not hard_constraints.get("has_mic"):
-        where_clauses.append("h.has_mic = true")
-
-    if "tri_mode" in soft_tags and "wireless" not in connectivities:
-        where_clauses.append("(m.connectivity = 'tri_mode' OR k.connectivity = 'tri_mode')")
-
-    # 9. Nếu không có bất kỳ bộ lọc/thuộc tính nào khớp, tìm kiếm tự do theo từ khóa trong tên/hãng
-    if len(where_clauses) == 1:
-        clean_q = raw_query.strip()
-        if clean_q:
-            where_clauses.append("(p.name ILIKE %s OR b.name ILIKE %s)")
-            params.extend([f"%{clean_q}%", f"%{clean_q}%"])
-        else:
-            where_clauses.append("1=0")
-
-    where_sql = " AND ".join(where_clauses)
-    sql = f"""SELECT 
-    p.id, p.name, c.name AS category_name, b.id AS brand_id, b.name AS brand,
-    p.price, p.rating, p.image_url, p.stock_quantity,
-    COALESCE(m.connectivity, k.connectivity, h.connectivity) AS connectivity
-FROM products p
-JOIN categories c ON p.category_id = c.id
-JOIN brands b ON p.brand_id = b.id
-LEFT JOIN mice m ON m.product_id = p.id
-LEFT JOIN keyboards k ON k.product_id = p.id
-LEFT JOIN headphones h ON h.product_id = p.id
-LEFT JOIN mousepads mp ON mp.product_id = p.id
-LEFT JOIN setups s ON s.product_id = p.id
-WHERE {where_sql}
-ORDER BY p.rating DESC, p.price ASC
-LIMIT %s;"""
-    params.append(limit)
-
-    # Tạo câu SQL hiển thị trực quan đã điền sẵn giá trị tham số để dễ kiểm tra
-    readable_sql = sql
-    for p in params:
-        val_str = f"'{p}'" if isinstance(p, str) else str(p)
-        readable_sql = readable_sql.replace("%s", val_str, 1)
-    readable_sql = readable_sql.replace("%%", "%")
-
-    return sql, params, readable_sql
-
-
-def execute_smart_search_db(
-    hard_constraints: dict[str, Any],
-    soft_tags: list[str],
-    raw_query: str = "",
-    limit: int = 20,
-) -> list[dict[str, Any]]:
-    """Truy vấn động bảng sản phẩm và các bảng con dựa trên ràng buộc bóc tách từ thanh tìm kiếm."""
-    sql, params, _ = build_smart_search_sql(hard_constraints, soft_tags, raw_query=raw_query, limit=limit)
-
-    results = []
-    with get_cursor(commit=False) as cur:
-        cur.execute(sql, tuple(params))
-        cols = [d[0] for d in cur.description]
-        for row in cur.fetchall():
-            d = dict(zip(cols, row))
-            # Format số thực
-            d["price"] = float(d["price"]) if d["price"] is not None else 0.0
-            d["rating"] = float(d["rating"]) if d["rating"] is not None else 0.0
-            results.append(d)
-
-    return results
-
-
 def fetch_featured_products_df(category_id: int | None = None) -> pd.DataFrame:
-    """Truy vấn dữ liệu xếp hạng sản phẩm nổi bật: rating, số lượt đánh giá, lượt bán.
+    """Điểm thực từ ratings; sức mua chỉ tính số lượng trong đơn đã giao.
 
-    Số lượt đánh giá đếm từ bảng ratings — nguồn thật mà rating.service.js duy trì —
-    thay vì đọc cột products.rating_count để hai bên không lệch nhau.
+    Không dùng sao seed trong products cho sản phẩm chưa có lượt chấm sao.
+    Không ghi DB; cùng một cách tổng hợp được dùng khi train và dự đoán.
     """
     sql = """
         SELECT
@@ -352,21 +150,27 @@ def fetch_featured_products_df(category_id: int | None = None) -> pd.DataFrame:
             c.name as category_name,
             b.name as brand,
             p.price,
-            p.rating,
-            COALESCE(rv.review_count, 0) as review_count,
+            p.stock_quantity,
+            COALESCE(rv.rating, 0) as rating,
+            COALESCE(rv.rating_count, 0) as rating_count,
+            COALESCE(rv.positive_ratio, 0) as positive_ratio,
             COALESCE(sd.sold_count, 0) as sold_count
         FROM products p
         JOIN categories c ON p.category_id = c.id
         JOIN brands b ON p.brand_id = b.id
         LEFT JOIN (
-            SELECT product_id, COUNT(*) as review_count
+            SELECT product_id, AVG(score)::float as rating,
+                   COUNT(*) as rating_count,
+                   COUNT(*) FILTER (WHERE score >= 4)::float / COUNT(*) as positive_ratio
             FROM ratings
             GROUP BY product_id
         ) rv ON rv.product_id = p.id
         LEFT JOIN (
-            SELECT product_id, SUM(quantity) as sold_count
-            FROM order_items
-            GROUP BY product_id
+            SELECT oi.product_id, SUM(oi.quantity) as sold_count
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            WHERE o.status = 'delivered'
+            GROUP BY oi.product_id
         ) sd ON sd.product_id = p.id
         WHERE %(category_id)s::int IS NULL OR p.category_id = %(category_id)s::int
         ORDER BY p.id;
@@ -377,7 +181,7 @@ def fetch_featured_products_df(category_id: int | None = None) -> pd.DataFrame:
         df = pd.DataFrame(cur.fetchall(), columns=cols)
 
     if not df.empty:
-        for col in ("price", "rating", "review_count", "sold_count"):
+        for col in ("price", "stock_quantity", "rating", "rating_count", "positive_ratio", "sold_count"):
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
         df["product_id"] = df["product_id"].astype(str)
     return df

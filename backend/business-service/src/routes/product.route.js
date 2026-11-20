@@ -17,6 +17,7 @@ router.delete("/:id/rating", authenticate, ratingController.removeRating);
 router.get("/:id/reviews", reviewController.getReviews);
 router.post("/:id/reviews", authenticate, reviewController.createOrUpdate);
 router.delete("/:id/reviews", authenticate, reviewController.removeReview);
+router.delete("/:id/reviews/:reviewId", authenticate, requireAdmin, reviewController.removeReviewByAdmin);
 router.get("/:id", productController.getById);
 router.post("/", authenticate, requireAdmin, productController.create);
 router.put("/:id", authenticate, requireAdmin, productController.update);

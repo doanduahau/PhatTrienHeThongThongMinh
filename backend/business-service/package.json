@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "test:admin": "node --test test/admin-readiness.test.js",
+    "test:images": "node --test test/product-images.test.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

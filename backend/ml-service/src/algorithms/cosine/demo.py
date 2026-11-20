@@ -10,11 +10,11 @@ Tính năng:
 
 Cách chạy:
     # 1. Chế độ nhập tương tác trực quan:
-    python cosine/test.py
+    python -m src.algorithms.cosine.demo
 
     # 2. Truyền tham số Product ID trực tiếp:
-    python cosine/test.py --id 1
-    python cosine/test.py --id 15 --top 5
+    python -m src.algorithms.cosine.demo --id 1
+    python -m src.algorithms.cosine.demo --id 15 --top 5
 """
 
 from __future__ import annotations

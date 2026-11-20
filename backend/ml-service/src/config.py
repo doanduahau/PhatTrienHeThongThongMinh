@@ -25,7 +25,7 @@ class Settings:
     def __init__(self) -> None:
         self.app_name = "Gear Shop ML Service"
         self.version = "1.0.0"
-        self.host = os.getenv("ML_HOST", "127.0.0.1")
+        self.host = os.getenv("ML_HOST", "localhost")
         self.port = int(os.getenv("ML_PORT", "8000"))
         # Nếu đặt token, các endpoint /admin/* yêu cầu header X-Internal-Token.
         self.internal_token = os.getenv("ML_INTERNAL_TOKEN", "").strip()

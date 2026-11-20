@@ -11,7 +11,7 @@ const imageUpload = multer({
     if (ALLOWED_MIMES.has(file.mimetype)) return cb(null, true);
     return cb(new Error("Chỉ chấp nhận file ảnh JPEG, PNG, WebP hoặc GIF!"));
   },
-}).single("file");
+}).single("image");
 
 /** Bọc multer để trả lỗi rõ ràng thay vì thông báo 4xx chung của global handler. */
 export const handleImageUpload = (req, res, next) => {

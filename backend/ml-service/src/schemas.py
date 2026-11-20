@@ -52,7 +52,7 @@ class FeaturedItem(BaseModel):
 
 
 class FeaturedResponse(BaseModel):
-    model: str = "rating_baseline"
+    model: str = "decision_tree"
     items: list[FeaturedItem] = Field(default_factory=list)
 
 

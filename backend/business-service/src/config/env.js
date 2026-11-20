@@ -16,7 +16,7 @@ export const env = {
   appTimeZone: process.env.APP_TIME_ZONE || "Asia/Ho_Chi_Minh",
 
   // ML service chạy nội bộ bằng uvicorn (xem ../ml-service/README.md)
-  mlServiceUrl: process.env.ML_SERVICE_URL || "http://127.0.0.1:8000",
+  mlServiceUrl: process.env.ML_SERVICE_URL || "http://localhost:8000",
   mlTimeoutMs: Number(process.env.ML_TIMEOUT_MS || 1200),
   mlInternalToken: process.env.ML_INTERNAL_TOKEN || "",
 

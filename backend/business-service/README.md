@@ -58,7 +58,7 @@ src/
 server.js          app.listen
 ```
 
-> Thư mục `tests/` chưa có; bộ test sẽ được viết lại sau bằng công cụ khác.
+Kiểm tra các lỗi admin bằng `npm run test:admin`; kiểm tra hai cách nhập ảnh bằng `npm run test:images` (Node test runner, dữ liệu giả trong bộ nhớ và Storage HTTP giả lập, không ghi DB hay upload ra ngoài).
 
 ## 5. API
 
@@ -87,6 +87,7 @@ Giá trị tiền/rating/decimal được trả về dạng **number** (ví dụ
 | POST | `/api/auth/resend-verification` | Đăng nhập | Gửi lại email xác thực |
 
 Token reset/verify là chuỗi ngẫu nhiên 64 ký tự, DB chỉ lưu **hash SHA-256** + hạn dùng.
+Response đăng nhập chỉ chứa thông tin công khai và JWT; không trả hash/hạn token reset hoặc xác thực email.
 Chưa cấu hình SMTP thì nội dung mail (kèm token) được in ra console server — đủ để test local.
 
 ### Danh mục, thương hiệu & sản phẩm
@@ -94,11 +95,12 @@ Chưa cấu hình SMTP thì nội dung mail (kèm token) được in ra console 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
 | GET | `/api/categories` | — | Danh sách danh mục |
+| GET | `/api/categories/:id` | — | Chi tiết danh mục |
 | POST/PUT/DELETE | `/api/categories/:id` | Admin | Thêm/sửa/xoá danh mục (`name`, `slug`) |
 | GET | `/api/brands` | — | Danh sách thương hiệu kèm `_count.products` |
 | GET | `/api/brands/:id` | — | Chi tiết thương hiệu |
 | POST/PUT/DELETE | `/api/brands/:id` | Admin | Thêm/sửa/xoá thương hiệu (`name`) |
-| GET | `/api/products` | — | `?page&limit&categoryId&brandId&brand&slug&search&sort` (`sort`: newest, price_asc, price_desc, name_asc, rating_desc) |
+| GET | `/api/products` | — | `?page&limit&categoryId&brandId&brand&slug&search&sort` (`sort`: newest, price_asc, price_desc, name_asc, rating_desc); mỗi item có `stockQuantity` + `isInStock` |
 | GET | `/api/products/:id` | — | Chi tiết + `detail` theo loại; thương hiệu nằm ở `brand: { id, name }` |
 | POST/PUT/DELETE | `/api/products/:id` | Admin | `brandId` bắt buộc khi tạo; body có `detail` ứng với danh mục (không chứa `brand`, không nhận `rating`) |
 | GET | `/api/products/:id/rating` | — | Điểm trung bình + số lượt chấm: `{ rating, ratingCount }` |
@@ -107,6 +109,7 @@ Chưa cấu hình SMTP thì nội dung mail (kèm token) được in ra console 
 | GET | `/api/products/:id/reviews` | — | `?page&limit` — nhận xét kèm `username`, `score`, `content` |
 | POST | `/api/products/:id/reviews` | Đăng nhập | `{ score, content }` — **chỉ người đã mua** (đơn không huỷ); viết lại = sửa |
 | DELETE | `/api/products/:id/reviews` | Đăng nhập | Xoá nhận xét của mình, **giữ** phiếu sao |
+| DELETE | `/api/products/:id/reviews/:reviewId` | Admin | Admin xoá nhận xét theo sản phẩm (`NX-XXXX`) — moderation |
 
 `rating` của sản phẩm là **trung bình tự tính** từ các lượt chấm trong bảng `ratings`
 (mỗi user 1 phiếu/sản phẩm, unique `user_id + product_id`), kèm `ratingCount` = số phiếu.
@@ -118,6 +121,8 @@ xoá review chỉ xoá phần chữ. Nhờ vậy trung bình luôn tính từ m�
 `id` của `ratings` là mã `DG-XXXX`, của `reviews` là `NX-XXXX`, do CSDL sinh (sequence + default),
 client không gửi lên — hai bảng này luôn thao tác qua `:id` sản phẩm + user đang đăng nhập.
 Xem quy ước chung ở `docs/express-backend.md` mục 4.7.
+
+Slug danh mục không được đổi sau khi tạo vì dùng để ánh xạ bảng thông số và đường dẫn catalog; admin vẫn sửa tên hiển thị được. Khi sửa sản phẩm, bỏ trường giá/tồn kho để giữ nguyên, gửi `0` để đặt về 0; chuỗi rỗng, null và boolean bị từ chối.
 
 ### Quy ước khoá chính của dự án
 
@@ -169,7 +174,8 @@ backend tự fallback bằng Prisma và trả `data.source = "fallback"`; API v�
 | GET | `/api/orders` | Đăng nhập | `?page&limit&status` |
 | GET | `/api/orders/:id` | Đăng nhập | Chi tiết đơn của mình (kèm `paymentMethod`, `paymentStatus`) |
 | PATCH | `/api/orders/:id/cancel` | Đăng nhập | Huỷ đơn `pending` |
-| GET | `/api/admin/orders` | Admin | `?page&limit&status&userId&from&to` |
+| GET | `/api/admin/orders` | Admin | `?page&limit&status&userId&from&to` — `from`/`to` là ngày theo `APP_TIME_ZONE`; mỗi đơn kèm `user: { id, username, email }` |
+| GET | `/api/admin/orders/:id` | Admin | Chi tiết một đơn bất kỳ (kèm `user`, `items`, `shippingMethod`) |
 | PATCH | `/api/admin/orders/:id/status` | Admin | `{ status }` theo máy trạng thái |
 | PATCH | `/api/admin/orders/:id/payment` | Admin | `{ paymentStatus: "paid" \| "unpaid" }` — xác nhận chuyển khoản; đơn đã huỷ trả 400 |
 | GET | `/api/payment-info` | — | `{ methods, bank }` — thông tin chuyển khoản cho client hiển thị |
@@ -205,26 +211,43 @@ Chuyển sai luồng trả 400 kèm `data.allowedStatuses`.
 Không thể tự khoá hoặc tự đổi role chính mình (400). User bị khoá: mọi API mang token cũ
 trả 403 ngay (middleware đọc DB mỗi request), đăng nhập cũng bị chặn.
 
-### Upload ảnh (Admin)
+### Nhập ảnh bằng link hoặc upload file (Admin)
 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/admin/uploads` | Admin | multipart `image` (jpeg/png/webp/gif, tối đa 5MB) → `{ url, path, size, contentType }` |
+| POST | `/api/admin/uploads` | Admin | JSON `{ imageUrl }` → `{ url, source: "url" }` |
+| POST | `/api/admin/uploads` | Admin | multipart `image` (jpeg/png/webp/gif, tối đa 5MB) → `{ url, source: "upload", path, size, contentType }` |
+
+Chỉ gửi một nguồn ảnh trong mỗi request; gửi cả file `image` và `imageUrl` bị từ chối. Link cần có giao thức HTTP/HTTPS; không nhận `data:`, base64, đường dẫn máy cá nhân hoặc FTP. BE kiểm tra định dạng link, không tải hay kiểm tra nội dung website bên ngoài.
+
+Ví dụ dùng link (header `Authorization: Bearer <token admin>`):
+
+```http
+POST /api/admin/uploads
+Content-Type: application/json
+
+{"imageUrl":"https://example.com/product.jpg"}
+```
+
+Với upload, gửi `multipart/form-data` có một file tên field `image`; để HTTP client tự tạo boundary. Lấy `data.url` từ response của một trong hai cách và gửi trong JSON `{ "imageUrl": "..." }` của `POST /api/products` hoặc `PUT /api/products/:id`. Endpoint nhập ảnh không tự tạo/sửa sản phẩm. Có thể gửi trực tiếp link HTTP/HTTPS trong JSON sản phẩm nếu không cần bước kiểm tra link riêng.
 
 Ảnh đẩy lên **Supabase Storage** (bucket `SUPABASE_STORAGE_BUCKET`, mặc định `product-images`,
-phải để public). Chưa cấu hình `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` thì trả 503.
+phải để public). Chưa cấu hình `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` thì nhánh upload file trả 503; nhánh nhập link vẫn dùng được.
 Dùng `url` trả về làm `imageUrl` khi tạo/sửa sản phẩm.
+
+DB lưu một URL tại `products.image_url` (text). URL có thể trỏ đến ảnh bên ngoài hoặc file đã upload lên Storage; file ảnh không lưu trực tiếp trong PostgreSQL. Frontend lấy `imageUrl` từ API sản phẩm để hiển thị theo cùng một cách cho cả hai nguồn.
 
 ### Thống kê (Admin)
 
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
 | GET | `/api/admin/stats/overview` | Admin | Tổng user/sản phẩm, đơn theo trạng thái, doanh thu đơn `delivered`, số đơn chờ thanh toán |
-| GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — doanh thu đơn `delivered` theo kỳ |
-| GET | `/api/admin/stats/top-products` | Admin | `?limit` — bán chạy theo số lượng (bỏ đơn huỷ) |
+| GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — doanh thu đơn `delivered` theo kỳ; `from`/`to` và kỳ đều theo `APP_TIME_ZONE` |
+| GET | `/api/admin/stats/top-products` | Admin | `?limit` — bán chạy theo số lượng trong đơn đã giao |
 | GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` — sản phẩm sắp hết hàng |
 
 Kỳ doanh thu được cắt theo múi giờ `APP_TIME_ZONE` (mặc định `Asia/Ho_Chi_Minh`).
+Tham số `from`/`to` của thống kê và danh sách đơn phải là ngày thực dạng `YYYY-MM-DD`, và `from <= to`.
 Mỗi phần tử trả về hai trường: `period` dạng ISO (`2026-11-07` hoặc `2026-11`) để client
 sắp xếp/lọc, và `periodLabel` dạng `DD/MM/YYYY` (`07/11/2026`) hoặc `MM/YYYY` (`11/2026`)
 để hiển thị.
@@ -255,7 +278,7 @@ mặc định 1200ms) và **luôn trả `null` khi lỗi**. Các service gợi �
 Biến môi trường cần thêm vào `.env`:
 
 ```env
-ML_SERVICE_URL=http://127.0.0.1:8000
+ML_SERVICE_URL=http://localhost:8000
 ML_TIMEOUT_MS=1200
 # Phải trùng ML_INTERNAL_TOKEN trong ../ml-service/.env (nếu có đặt)
 ML_INTERNAL_TOKEN=doi_thanh_chuoi_bi_mat_noi_bo
@@ -265,7 +288,7 @@ Chạy ML service (chi tiết ở `../ml-service/README.md`):
 
 ```powershell
 cd ../ml-service
-.\venv\Scripts\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host localhost --port 8000
 ```
 
 ML chỉ trả `product_id` + điểm số. Backend hydrate giá/tồn kho/ảnh từ DB nên dữ liệu
@@ -281,4 +304,4 @@ luôn mới. ML kết nối PostgreSQL bằng tài khoản **read-only**.
 - Review kiểm tra người mua bằng `order_items` thuộc đơn **không huỷ** của chính user đó; upsert review và upsert phiếu sao chạy chung một transaction với khoá dòng sản phẩm.
 - Token quên mật khẩu / xác thực email: sinh ngẫu nhiên, chỉ lưu hash SHA-256 trong DB, một lần dùng (xoá sau khi dùng), có hạn.
 - `authenticate` đọc lại user từ DB mỗi request: role luôn mới và tài khoản bị khoá mất hiệu lực token ngay lập tức.
-- Doanh thu chỉ tính đơn `delivered`; top sản phẩm bỏ đơn `cancelled`.
+- Doanh thu và top sản phẩm chỉ tính đơn `delivered`.

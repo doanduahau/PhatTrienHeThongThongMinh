@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useStore } from "./store";
@@ -17,9 +18,8 @@ function Wordmark({ isTransparent = false }: { isTransparent?: boolean }) {
       <svg
         viewBox="0 0 40 40"
         fill="none"
-        className={`size-10 transition-colors duration-200 ${
-          isTransparent ? "text-white" : "text-ink"
-        }`}
+        className={`size-10 transition-colors duration-200 ${isTransparent ? "text-white" : "text-ink"
+          }`}
         aria-hidden="true"
       >
         <circle cx="20" cy="20" r="17.5" stroke="currentColor" strokeWidth="2" />
@@ -32,9 +32,8 @@ function Wordmark({ isTransparent = false }: { isTransparent?: boolean }) {
         />
       </svg>
       <span
-        className={`text-xl font-bold transition-colors duration-200 ${
-          isTransparent ? "text-white" : "text-ink"
-        }`}
+        className={`text-xl font-bold transition-colors duration-200 ${isTransparent ? "text-white" : "text-ink"
+          }`}
       >
         Gear Shop
       </span>
@@ -63,20 +62,18 @@ function SearchForm({
     <form
       role="search"
       onSubmit={submit}
-      className={`flex items-center gap-2 rounded-btn border px-3 transition-colors duration-200 ${
-        isTransparent
+      className={`flex items-center gap-2 rounded-btn border px-3 transition-colors duration-200 ${isTransparent
           ? "border-white/20 bg-white/10 text-white placeholder:text-white/60 focus-within:border-white/40 focus-within:bg-white/15"
           : "border-line bg-subtle text-ink focus-within:border-accent"
-      } ${className}`}
+        } ${className}`}
     >
       <svg
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
-        className={`size-4 shrink-0 transition-colors duration-200 ${
-          isTransparent ? "text-white/70" : "text-muted"
-        }`}
+        className={`size-4 shrink-0 transition-colors duration-200 ${isTransparent ? "text-white/70" : "text-muted"
+          }`}
         aria-hidden="true"
       >
         <circle cx="11" cy="11" r="7" />
@@ -87,11 +84,10 @@ function SearchForm({
         name="q"
         placeholder="Tìm chuột, bàn phím..."
         aria-label="Tìm sản phẩm"
-        className={`h-11 w-full bg-transparent text-[15px] outline-none transition-colors duration-200 ${
-          isTransparent
+        className={`h-11 w-full bg-transparent text-[15px] outline-none transition-colors duration-200 ${isTransparent
             ? "text-white placeholder:text-white/60"
             : "text-ink placeholder:text-muted"
-        }`}
+          }`}
       />
     </form>
   );
@@ -115,13 +111,12 @@ function NavGroupItem({
       <Link
         href={group.viewAll.href}
         aria-current={isActive ? "page" : undefined}
-        className={`flex items-center gap-0.5 whitespace-nowrap text-base font-medium transition-colors duration-200 ${
-          isActive
+        className={`flex items-center gap-0.5 whitespace-nowrap text-base font-medium transition-colors duration-200 ${isActive
             ? "text-accent underline underline-offset-8"
             : isTransparent
-            ? "text-white/90 hover:text-white"
-            : "text-ink hover:text-accent"
-        }`}
+              ? "text-white/90 hover:text-white"
+              : "text-ink hover:text-accent"
+          }`}
       >
         {group.name}
         <span className="flex w-0 shrink-0 items-center overflow-visible ps-1">
@@ -139,20 +134,16 @@ function NavGroupItem({
           </svg>
         </span>
       </Link>
-      <div className="pointer-events-none absolute left-0 top-full z-50 w-max max-w-[64rem] pt-2 opacity-0 transition-[opacity,transform] delay-75 duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-        <div
-          className="grid -translate-y-1 rounded-card border border-line bg-bg p-6 shadow-float transition-transform duration-200 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0"
-          style={{
-            gridTemplateColumns: `minmax(12rem, 1fr) repeat(${Math.min(group.columns.length, 4)}, minmax(10rem, 13rem))`,
-          }}
-        >
-          <div className="flex flex-col gap-1 border-e border-line pe-6">
-            <span className="text-lg font-semibold text-ink">
+      <div className="pointer-events-none absolute left-0 top-full z-50 w-[78rem] max-w-[calc(100vw-3rem)] pt-2 opacity-0 transition-[opacity,transform] delay-75 duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+        <div className="flex -translate-y-1 justify-between gap-8 rounded-card border border-line bg-bg p-8 shadow-float transition-transform duration-200 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0">
+          {/* Cột trái: Tên nhóm và link Xem tất cả */}
+          <div className="flex w-44 shrink-0 flex-col gap-2 border-e border-line pe-6">
+            <span className="text-xl font-bold tracking-tight text-ink">
               {group.name}
             </span>
             <Link
               href={group.viewAll.href}
-              className="mt-1 inline-flex items-center gap-1 text-[15px] font-medium text-accent hover:underline"
+              className="mt-1 inline-flex items-center gap-1 text-[15px] font-semibold text-accent hover:underline"
             >
               {group.viewAll.label}
               <svg
@@ -169,25 +160,92 @@ function NavGroupItem({
               </svg>
             </Link>
           </div>
-          {group.columns.map((column) => (
-            <div key={column.name} className="flex flex-col gap-1 ps-6">
-              <Link
-                href={column.href}
-                className="mb-1 text-[15px] font-semibold text-ink hover:text-accent"
-              >
-                {column.name}
-              </Link>
-              {column.links.map((link) => (
+
+          {/* Cột giữa: Các chuyên mục danh mục con */}
+          <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
+            {group.columns.map((column) => (
+              <div key={column.name} className="flex flex-col gap-1.5">
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  className="min-w-0 truncate rounded-btn text-[15px] text-muted transition-colors duration-150 hover:text-accent"
+                  href={column.href}
+                  className="mb-1 text-[15px] font-bold text-ink transition-colors hover:text-accent"
                 >
-                  {link.label}
+                  {column.name}
                 </Link>
-              ))}
+                {column.links.map((link) => (
+                  <Link
+                    key={`${link.label}-${link.href}`}
+                    href={link.href}
+                    className="min-w-0 truncate text-[14px] text-muted transition-colors duration-150 hover:text-accent"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Cột phải: Khối ảnh sản phẩm nổi bật tương tự Phong Cách Xanh */}
+          {group.featured ? (
+            <div className="flex w-72 shrink-0 flex-col gap-3 ps-2">
+              {/* Banner ảnh to phía trên */}
+              <Link
+                href={group.featured.large.href}
+                className="group/feat relative block aspect-[16/10] w-full overflow-hidden rounded-xl border border-line bg-subtle"
+              >
+                <Image
+                  src={group.featured.large.image}
+                  alt={group.featured.large.title}
+                  fill
+                  sizes="288px"
+                  className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-6">
+                  <span className="inline-block rounded-md bg-white/90 px-2 py-0.5 text-xs font-bold text-ink backdrop-blur-sm">
+                    {group.featured.large.title}
+                  </span>
+                </div>
+              </Link>
+
+              {/* 2 banner nhỏ phía dưới */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <Link
+                  href={group.featured.small1.href}
+                  className="group/feat relative block aspect-[4/3] w-full overflow-hidden rounded-xl border border-line bg-subtle"
+                >
+                  <Image
+                    src={group.featured.small1.image}
+                    alt={group.featured.small1.title}
+                    fill
+                    sizes="140px"
+                    className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4">
+                    <span className="block truncate text-[11px] font-bold text-white">
+                      {group.featured.small1.title}
+                    </span>
+                  </div>
+                </Link>
+
+                <Link
+                  href={group.featured.small2.href}
+                  className="group/feat relative block aspect-[4/3] w-full overflow-hidden rounded-xl border border-line bg-subtle"
+                >
+                  <Image
+                    src={group.featured.small2.image}
+                    alt={group.featured.small2.title}
+                    fill
+                    sizes="140px"
+                    className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4">
+                    <span className="block truncate text-[11px] font-bold text-white">
+                      {group.featured.small2.title}
+                    </span>
+                  </div>
+                </Link>
+              </div>
             </div>
-          ))}
+          ) : null}
         </div>
       </div>
     </div>
@@ -210,13 +268,12 @@ function NavPlainItem({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`whitespace-nowrap text-base font-medium transition-colors duration-200 ${
-          active
+        className={`whitespace-nowrap text-base font-medium transition-colors duration-200 ${active
             ? "text-accent underline underline-offset-8"
             : isTransparent
-            ? "text-white/90 hover:text-white"
-            : "text-ink hover:text-accent"
-        }`}
+              ? "text-white/90 hover:text-white"
+              : "text-ink hover:text-accent"
+          }`}
       >
         {label}
       </Link>
@@ -276,9 +333,8 @@ function AnnouncementBar() {
             <span
               key={message}
               aria-hidden={i !== index}
-              className={`block whitespace-nowrap transition-opacity duration-300 ${
-                i === index ? "opacity-100" : "absolute inset-0 opacity-0"
-              }`}
+              className={`block whitespace-nowrap transition-opacity duration-300 ${i === index ? "opacity-100" : "absolute inset-0 opacity-0"
+                }`}
             >
               {message}
             </span>
@@ -344,13 +400,21 @@ function AnnouncementBar() {
   );
 }
 
-const DRAWER_LINKS = [{ href: "/don-hang", label: "Đơn hàng" }];
-
 export function Header({ nav }: { nav: NavGroup[] }) {
-  const { user, cartCount, cartOpen, logout, ready, openCart } = useStore();
+  const { user, cartCount, cartOpen, ready, openCart } = useStore();
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    "Gaming Gear": true,
+    "Office Gear": true,
+  });
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  };
 
   const currentSlug = pathname.startsWith("/danh-muc/")
     ? decodeURIComponent(pathname.slice("/danh-muc/".length))
@@ -429,18 +493,16 @@ export function Header({ nav }: { nav: NavGroup[] }) {
       <header
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300 ease-in-out ${
-          isVisible ? "translate-y-0" : "-translate-y-full"
-        } ${
-          isTransparent
+        className={`fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300 ease-in-out ${isVisible ? "translate-y-0" : "-translate-y-full"
+          } ${isTransparent
             ? "bg-transparent text-white"
             : "bg-bg/95 text-ink shadow-sm backdrop-blur-md"
-        }`}
+          }`}
       >
         {/* Thanh thông báo chạy vòng ở trên cùng: luôn nền đen đặc, chữ trắng */}
         <AnnouncementBar />
 
-        <Container className="flex h-[4.5rem] items-center gap-4">
+        <Container className="flex h-[4.5rem] items-center gap-3 lg:gap-4">
           <Wordmark isTransparent={isTransparent} />
 
           {nav.length > 0 ? (
@@ -467,19 +529,20 @@ export function Header({ nav }: { nav: NavGroup[] }) {
             </nav>
           ) : null}
 
+          {/* Thanh tìm kiếm trên Header */}
           <SearchForm
             isTransparent={isTransparent}
-            className="mx-auto hidden min-w-0 md:flex md:max-w-2xl md:flex-1"
+            className="mx-auto hidden min-w-0 md:flex md:max-w-xs md:flex-1 lg:max-w-sm xl:max-w-md 2xl:max-w-xl"
           />
+
           <div className="ml-auto flex items-center gap-1 md:ml-0">
             <Link
               href={accountHref}
               aria-label={user ? `Tài khoản ${user.username}` : "Đăng nhập"}
-              className={`flex size-11 items-center justify-center rounded-btn transition-colors duration-200 ${
-                isTransparent
+              className={`flex size-11 items-center justify-center rounded-btn transition-colors duration-200 ${isTransparent
                   ? "text-white hover:bg-white/15"
                   : "text-ink hover:bg-subtle"
-              }`}
+                }`}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -502,11 +565,10 @@ export function Header({ nav }: { nav: NavGroup[] }) {
               aria-label={
                 ready && cartCount > 0 ? `Mở giỏ hàng, ${cartCount} sản phẩm` : "Mở giỏ hàng"
               }
-              className={`relative flex size-11 items-center justify-center rounded-btn transition-colors duration-200 ${
-                isTransparent
+              className={`relative flex size-11 items-center justify-center rounded-btn transition-colors duration-200 ${isTransparent
                   ? "text-white hover:bg-white/15"
                   : "text-ink hover:bg-subtle"
-              }`}
+                }`}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -532,11 +594,10 @@ export function Header({ nav }: { nav: NavGroup[] }) {
               aria-expanded={open}
               aria-label={open ? "Đóng menu" : "Mở menu"}
               onClick={() => setOpen((value) => !value)}
-              className={`flex size-11 items-center justify-center rounded-btn transition-colors duration-200 xl:hidden ${
-                isTransparent
+              className={`flex size-11 items-center justify-center rounded-btn transition-colors duration-200 xl:hidden ${isTransparent
                   ? "text-white hover:bg-white/15"
                   : "text-ink hover:bg-subtle"
-              }`}
+                }`}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -553,115 +614,110 @@ export function Header({ nav }: { nav: NavGroup[] }) {
           </div>
         </Container>
 
-        {open ? (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-ink/40 xl:hidden"
-              onClick={() => setOpen(false)}
-              aria-hidden="true"
-            />
-            <nav
-              aria-label="Menu di động"
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col gap-1 overflow-y-auto bg-bg p-5 text-ink shadow-float xl:hidden"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <span className="font-semibold">Menu</span>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Đóng menu"
-                  className="flex size-10 items-center justify-center rounded-btn hover:bg-subtle"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    className="size-5"
-                    aria-hidden="true"
-                  >
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
-              <SearchForm onDone={() => setOpen(false)} />
+      </header>
 
-              {nav.map((group) => (
-                <div key={group.name} className="flex flex-col gap-0.5">
-                  <Link
-                    href={group.viewAll.href}
-                    onClick={() => setOpen(false)}
-                    className="px-3 pt-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-accent"
-                  >
-                    {group.name}
-                  </Link>
-                  {group.columns.map((column) => (
-                    <Link
-                      key={column.href}
-                      href={column.href}
-                      className="rounded-btn px-3 py-2.5 text-sm hover:bg-subtle"
-                    >
-                      {column.name}
-                    </Link>
-                  ))}
-                </div>
-              ))}
-              <div className="mt-2 border-t border-line pt-2">
-                {INFO_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block rounded-btn px-3 py-2.5 text-sm hover:bg-subtle"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="mt-2" />
+      {open ? (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-ink/40 xl:hidden"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <nav
+            aria-label="Menu di động"
+            className="fixed inset-y-0 left-0 z-50 flex h-full w-72 flex-col gap-2 overflow-y-auto bg-bg p-5 text-ink shadow-float xl:hidden"
+          >
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <span className="text-lg font-bold">Menu</span>
               <button
                 type="button"
-                onClick={() => {
-                  setOpen(false);
-                  openCart();
-                }}
-                className="rounded-btn px-3 py-2.5 text-left text-sm hover:bg-subtle"
+                onClick={() => setOpen(false)}
+                aria-label="Đóng menu"
+                className="flex size-10 items-center justify-center rounded-btn hover:bg-subtle"
               >
-                Giỏ hàng
-                {ready && cartCount > 0 ? ` (${cartCount})` : ""}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  className="size-5"
+                  aria-hidden="true"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
               </button>
-              {DRAWER_LINKS.map((link) => (
+            </div>
+
+            <div className="flex flex-col gap-1 py-1">
+              {nav.map((group) => {
+                const isExpanded = Boolean(expandedGroups[group.name]);
+                return (
+                  <div key={group.name} className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.name)}
+                      aria-expanded={isExpanded}
+                      className="flex w-full items-center justify-between rounded-btn px-3 py-2.5 text-sm font-semibold uppercase tracking-wider text-ink transition-colors hover:bg-subtle hover:text-accent"
+                    >
+                      <span>{group.name}</span>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`size-4 text-muted transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                        aria-hidden="true"
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="flex flex-col gap-0.5 pb-2 ps-3">
+                        <Link
+                          href={group.viewAll.href}
+                          onClick={() => setOpen(false)}
+                          className="rounded-btn px-3 py-2 text-xs font-medium text-accent hover:bg-subtle"
+                        >
+                          {group.viewAll.label} →
+                        </Link>
+                        {group.columns.map((column) => (
+                          <Link
+                            key={column.href}
+                            href={column.href}
+                            onClick={() => setOpen(false)}
+                            className="rounded-btn px-3 py-2 text-sm text-ink/80 hover:bg-subtle hover:text-ink"
+                          >
+                            {column.name}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-line pt-2">
+              {INFO_LINKS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-btn px-3 py-2.5 text-sm hover:bg-subtle"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-btn px-3 py-2.5 text-sm font-medium hover:bg-subtle hover:text-accent"
                 >
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href={accountHref}
-                className="rounded-btn px-3 py-2.5 text-sm hover:bg-subtle"
-              >
-                {user ? user.username : "Đăng nhập"}
-              </Link>
-              {user ? (
-                <button
-                  type="button"
-                  className="rounded-btn px-3 py-2.5 text-left text-sm text-danger hover:bg-subtle"
-                  onClick={() => {
-                    logout();
-                    router.push("/dang-nhap");
-                  }}
-                >
-                  Đăng xuất
-                </button>
-              ) : null}
-            </nav>
-          </>
-        ) : null}
-      </header>
+            </div>
+          </nav>
+        </>
+      ) : null}
     </>
   );
 }

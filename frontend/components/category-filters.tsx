@@ -392,8 +392,8 @@ export function CategoryFilters({
   return (
     <aside aria-label="Bộ lọc" className="space-y-1">
       {/* Tiêu đề & Đặt lại */}
-      <div className="flex min-h-[34px] items-center justify-between border-b border-line bg-bg pb-4">
-        <div className="flex items-center gap-2 font-bold text-base text-ink">
+      <div className="flex h-11 items-center justify-between border-b border-line bg-bg pb-4">
+        <div className="flex items-center gap-2 font-bold text-base leading-none text-ink">
           <svg
             viewBox="0 0 24 24"
             fill="none"

@@ -1,4 +1,4 @@
-"""Router xếp hạng sản phẩm nổi bật (Bayesian Weighted Rating)."""
+"""Router xếp hạng sản phẩm nổi bật bằng cây quyết định đã train."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from src.schemas import FeaturedItem, FeaturedResponse
+from src.model_store import ModelNotReady, store
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ranking", tags=["ranking"])
@@ -18,18 +19,13 @@ def featured_products(
     limit: int = Query(default=10, ge=1, le=50),
 ) -> FeaturedResponse:
     try:
-        from src.algorithms.rating_baseline.ranking import FeaturedProductsRanker
         from src.db.repository import fetch_featured_products_df
 
+        ranker = store.get("featured")
         products_df = fetch_featured_products_df(category_id=category_id)
-        # Sold boost tắt vì toàn catalog mới có 1 lượt bán trong order_items:
-        # phần thưởng log1p chuẩn hoá theo max sẽ ghim đúng sản phẩm đó lên hạng nhất,
-        # biến nhiễu thành tín hiệu. Bật lại khi dữ liệu đơn hàng đủ dày.
-        ranked = FeaturedProductsRanker().get_featured_products(
-            products_df,
-            top_n=limit,
-            include_sold_boost=False,
-        )
+        ranked = ranker.get_featured_products(products_df, top_n=limit)
+    except ModelNotReady as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Xếp hạng sản phẩm nổi bật thất bại")
         raise HTTPException(status_code=503, detail=f"Không xếp hạng được: {exc}") from exc
@@ -42,4 +38,4 @@ def featured_products(
         )
         for row in ranked
     ]
-    return FeaturedResponse(model="bayesian_weighted_rating", items=items)
+    return FeaturedResponse(model="decision_tree", items=items)

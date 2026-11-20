@@ -10,11 +10,11 @@ Tính năng:
 
 Cách chạy:
     # 1. Chế độ nhập tương tác trực quan:
-    python cosine_kmeans/test.py
+    python -m src.algorithms.cosine_kmeans.demo
 
     # 2. Truyền tham số User ID trực tiếp:
-    python cosine_kmeans/test.py --user 1
-    python cosine_kmeans/test.py --user 42 --top 5
+    python -m src.algorithms.cosine_kmeans.demo --user 1
+    python -m src.algorithms.cosine_kmeans.demo --user 42 --top 5
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 

@@ -43,7 +43,39 @@ async function sheets(products, results, prefix) {
 }
 const main = async () => {
   const mode = process.argv[2];
-  if (mode === "pages") {
+  if (mode === "extras") {
+    const plan = json("plan.json"), products = json("products.json");
+    const upsert = (id, url, source, title) => {
+      const p = products.find((p) => p.id === id);
+      const row = { id, name: p.name, old: p.imageUrl, url, source, sourceTitle: title, reason: "Matched product model, layout and color; use native product image resolution." };
+      const index = plan.findIndex((p) => p.id === id);
+      if (index >= 0) plan[index] = row; else plan.push(row);
+    };
+    upsert(262, "https://hnau.imgix.net/media/catalog/product/9/2/920-012426-logitech-g-pro-x-tkl-gaming-keyboard-7.jpg?q=90", "https://www.harveynorman.com.au/logitech-g-pro-x-2-tkl-lightspeed-gaming-keyboard-magenta.html", "Logitech PRO X TKL Magenta, SKU 920-012426");
+    const photo = plan.find((p) => p.id === 99);
+    if (photo) { const u = new URL(photo.url); u.searchParams.set("q", "90"); photo.url = u.href; }
+    save("plan.json", plan.sort((a, b) => a.id - b.id));
+    const moftUrl = "https://www.moft.us/products/moft-z-5-in-1-sit-stand-desk.js";
+    try {
+      const response = await fetch(moftUrl, { signal: AbortSignal.timeout(15000) });
+      const product = await response.json();
+      save("moft-product.json", product);
+      console.log("MOFT", JSON.stringify({ title: product.title, images: product.images?.slice(0, 6) }));
+      for (let i = 0; i < 3; i++) if (product.images?.[i]) console.log("MOFT_IMAGE", JSON.stringify(await inspect(35700 + i, new URL(product.images[i], moftUrl).href, "extra")));
+    } catch (error) { console.log("MOFT", error.message); }
+    const url = "https://www.razer.com/gaming-keyboards/Razer-DeathStalker-V2-Pro-Tenkeyless/RZ03-04373500-R3M1";
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      const html = (await response.text()).replace(/\\u002[Ff]/g, "/");
+      const urls = [...new Set((html.match(/https?:[^\s<>"']+/g) ?? []).filter((u) => /1500x1000/.test(u) && /white/i.test(u)).map((u) => u.includes("https%3A") ? decodeURIComponent(u.slice(u.indexOf("https%3A"))) : u))];
+      save("deathstalker-white-gallery.json", { url, images: urls });
+      console.log("DEATHSTALKER", JSON.stringify(urls.slice(0, 8)));
+      for (let i = 0; i < 3; i++) if (urls[i]) console.log("RAZER_IMAGE", JSON.stringify(await inspect(24400 + i, urls[i], "extra")));
+    } catch (error) { console.log("DEATHSTALKER", error.message); }
+  } else if (mode === "manual") {
+    const { addManualImages } = await import("./image-repair-manual.js");
+    addManualImages();
+  } else if (mode === "pages") {
     const pages = {
       razerViper: "https://www.razer.com/gaming-mice/razer-viper-v3-pro",
       razerCobra: "https://www.razer.com/gaming-mice/razer-cobra-pro",
@@ -68,7 +100,7 @@ const main = async () => {
       } catch (error) { console.log(key, error.message); }
     }
   } else if (mode === "details") {
-    const products = await prisma.product.findMany({ select: { id: true, color: true, name: true }, orderBy: { id: "asc" } });
+    const products = await prisma.product.findMany({ select: { id: true, color: true, name: true, keyboard: { select: { layout: true } }, mouse: { select: { connectivity: true } }, headphone: { select: { connectivity: true } } }, orderBy: { id: "asc" } });
     save("product-colors.json", products);
     console.log(products.map((p) => `${p.id} ${p.color} ${p.name}`).join("\n"));
   } else if (mode === "sources") {
@@ -118,7 +150,7 @@ const main = async () => {
     for (const p of inspected) {
       const c = p.choices[0];
       if (c) await sharp(path.join(dir, `candidate-${c.imageId}.jpg`)).toFile(path.join(dir, `round2-${p.id}.jpg`));
-      compact.push({ id: p.id, ...(c ?? { error: "NO IMAGE" }) });
+      compact.push({ ...(c ?? { error: "NO IMAGE" }), id: p.id });
     }
     await sheets(inspected, compact, "round2");
     for (let start = 0; start < inspected.length; start += 10) {
@@ -143,9 +175,37 @@ const main = async () => {
     save("current-audit.json", results);
     await sheets(products, results, "current");
     console.log(JSON.stringify({ total: products.length, broken: results.filter((r) => r.error).map((r) => ({ id: r.id, error: r.error })), small: results.filter((r) => !r.error && Math.max(r.width, r.height) < 800).map((r) => ({ id: r.id, width: r.width, height: r.height })) }));
+  } else if (mode === "seal") {
+    const plan = json("plan.json"), moft = json("moft-product.json"), razer = json("deathstalker-white-gallery.json");
+    const desk = plan.find((p) => p.id === 357);
+    desk.url = new URL(moft.variants.find((v) => v.title === "Black").featured_image.src, "https://www.moft.us").href;
+    desk.source = "https://www.moft.us/products/moft-z-5-in-1-sit-stand-desk";
+    desk.sourceTitle = "MOFT Z Sit-stand Laptop Desk - Black";
+    const keyboard = plan.find((p) => p.id === 244);
+    keyboard.url = razer.images.find((u) => u.endsWith("white-1500x1000-2.jpg"));
+    keyboard.source = razer.url;
+    keyboard.sourceTitle = "Razer DeathStalker V2 Pro Tenkeyless - White, RZ03-04373500-R3M1";
+    if (!keyboard.url || !desk.url) throw new Error("Missing exact manufacturer images");
+    save("plan.json", plan);
+    console.log("Final manufacturer images selected");
+  } else if (mode === "finalize") {
+    const products = json("products.json"), plan = json("plan.json");
+    const unresolvedIds = [95,143,144,145,149,236,296,302,308,351,355,361,362,363,365,366,382,383,384,399,400];
+    const unresolved = unresolvedIds.map((id) => {
+      const p = products.find((p) => p.id === id);
+      return { id, name: p.name, old: p.imageUrl, url: "", source: "Search results and manufacturer catalog reviewed; no verified matching model/color photo", reason: "Remove known incorrect image. Use the existing frontend category icon until a matching product photo is available." };
+    });
+    for (const p of unresolved) {
+      const at = plan.findIndex((r) => r.id === p.id);
+      if (at >= 0) plan[at] = p; else plan.push(p);
+    }
+    save("unresolved.json", unresolved);
+    save("plan.json", plan.filter((p) => p.url !== p.old).sort((a, b) => a.id - b.id));
+    console.log(JSON.stringify({ replacements: plan.filter((p) => p.url && p.url !== p.old).length, removedWrongImages: unresolved.length }));
   } else if (mode === "check-plan") {
     const plan = json("plan.json");
-    const results = await parallel(plan, (p) => inspect(p.id, p.url, "replacement"));
+    const previous = existsSync(path.join(dir, "replacement-audit.json")) ? json("replacement-audit.json") : [];
+    const results = await parallel(plan.filter((p) => p.url), (p) => previous.find((r) => r.id === p.id && r.url === p.url && !r.error) ?? inspect(p.id, p.url, "replacement"));
     save("replacement-audit.json", results);
     await sheets(plan, results, "replacement");
     console.log(JSON.stringify({ total: plan.length, failed: results.filter((r) => r.error || Math.max(r.width, r.height) < 800) }));
@@ -153,6 +213,7 @@ const main = async () => {
     const plan = json("plan.json"), checked = json("replacement-audit.json");
     if (new Set(plan.map((p) => p.id)).size !== plan.length) throw new Error("Duplicate product IDs");
     for (const p of plan) {
+      if (p.url === "" && p.reason && p.source) continue;
       const m = checked.find((r) => r.id === p.id && r.url === p.url);
       if (!m || m.error || Math.max(m.width, m.height) < 800 || !p.source || !p.reason) throw new Error(`Unverified image #${p.id}`);
     }
@@ -166,6 +227,10 @@ const main = async () => {
     }, { timeout: 60000 });
     const after = await prisma.product.findMany({ select: { id: true, name: true, imageUrl: true }, orderBy: { id: "asc" } });
     save("after-apply.json", after);
+    const quote = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const report = plan.map((p) => ({ ...p, width: checked.find((m) => m.id === p.id)?.width, height: checked.find((m) => m.id === p.id)?.height }));
+    writeFileSync(path.join(dir, "applied-report.csv"), "\uFEFF" + ["id,name,action,width,height,source,image_url,previous_image_url", ...report.map((p) => [p.id,p.name,p.url ? "replaced" : "removed_unverified",p.width,p.height,p.source,p.url,p.old].map(quote).join(","))].join("\n"));
+    save("applied-summary.json", { appliedAt: new Date().toISOString(), products: after.length, replaced: plan.filter((p) => p.url).length, removedUnverified: plan.filter((p) => !p.url).length, verified: plan.every((p) => after.find((a) => a.id === p.id)?.imageUrl === p.url), remainingLandscape: after.filter((p) => /picsum|unsplash/.test(p.imageUrl ?? "")).length, changedNamesDuringApply: before.filter((b) => after.find((a) => a.id === b.id)?.name !== b.name).length });
     console.log(JSON.stringify({ updated: plan.length, verified: plan.every((p) => after.find((r) => r.id === p.id)?.imageUrl === p.url), remainingLandscape: after.filter((p) => /picsum|unsplash/.test(p.imageUrl ?? "")).map((p) => p.id), nameDifferencesDuringApply: before.filter((b) => after.find((a) => a.id === b.id)?.name !== b.name).length }));
   } else throw new Error("Use audit, check-plan, or apply");
 };
