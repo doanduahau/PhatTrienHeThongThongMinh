@@ -30,7 +30,7 @@ Client (web / mobile / Postman)
 │ Business service         │  HTTP  │ ML service (FastAPI)         │
 │ Express + Prisma :3000   │ ─────► │ :8000 (bind 127.0.0.1)       │
 │                          │        │ Cosine / FP-Growth / KMeans  │
-│ - Auth, sản phẩm, giỏ    │        │ SVM+Regex / Rating baseline  │
+│ - Auth, sản phẩm, giỏ    │        │ SVM+Regex / Decision Tree    │
 │ - Đơn hàng, tồn kho      │        │ Chỉ đọc DB                   │
 │ - Hydrate dữ liệu từ DB  │        │                              │
 └────────────┬─────────────┘        └──────────────┬───────────────┘
@@ -76,13 +76,13 @@ backend/
     server.js                    app.listen
 
   ml-service/                    ML service (Python, venv)
-    ml_service/
+    src/
       __init__.py
       main.py                    FastAPI entrypoint, lifespan preload model
       config.py                  Settings từ .env + ROOT_DIR/DATA_DIR/MODELS_DIR
       deps.py                    Xác thực X-Internal-Token cho /admin/*
       schemas.py                 Pydantic request/response
-      model_store.py             Registry load/reload 4 model .joblib
+      model_store.py             Registry load/reload 5 model .joblib
       routers/
         admin.py                 /admin/reload
         health.py                /health /ready /models
@@ -95,16 +95,14 @@ backend/
         cosine_kmeans/           Cosine + K-Means (gợi ý cá nhân hóa)
         fp_growth/               FP-Growth (thường mua kèm)
         svm_regex/               SVM + Regex (tìm kiếm thông minh)
-        rating_baseline/         Baseline (sản phẩm nổi bật)
+        decision_tree/           Decision Tree (sản phẩm nổi bật)
       db/
         __init__.py
         config.py                Kết nối PostgreSQL read-only
         repository.py            Truy vấn phục vụ train/ranking
-        schema.sql
-        seed/
     scripts/
       train.py                   Train + ghi manifest vào models/
-      demo.py                    Kiểm thử trực quan tổng hợp (từ test.py cũ)
+      demo.py                    Kiểm thử trực quan tổng hợp
     models/                      Model .joblib + manifest
     data/                        CSV huấn luyện
     tests/test_api.py            Smoke test FastAPI
@@ -141,12 +139,12 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env      # sửa DATABASE_URL read-only
-.\venv\Scripts\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host localhost --port 8000
 ```
 
-> Service **chỉ bind `127.0.0.1`**. Không mở ra Internet; business service gọi nội bộ.
+> Service **chỉ bind `localhost`**. Không mở ra Internet; business service gọi nội bộ.
 
-Kiểm tra: `GET http://127.0.0.1:8000/health` và `GET /ready`.
+Kiểm tra: `GET http://localhost:8000/health` và `GET /ready`.
 
 Nếu chưa có file model, train trước:
 
@@ -163,6 +161,7 @@ Các model hiện có sẵn:
 | Thường mua kèm | `models/rules_model.joblib` |
 | Gợi ý cá nhân hóa | `models/personalized_model.joblib` |
 | Tìm kiếm thông minh | `models/intent_model.joblib` |
+| Sản phẩm nổi bật | `models/featured_model.joblib` |
 
 ---
 
@@ -178,7 +177,7 @@ Các model hiện có sẵn:
 | `JWT_SECRET` | dev-secret | Phải đổi khi deploy |
 | `JWT_EXPIRES_IN` | `7d` | Hạn token |
 | `BCRYPT_SALT_ROUNDS` | `10` | Hash password |
-| `ML_SERVICE_URL` | `http://127.0.0.1:8000` | Địa chỉ ML |
+| `ML_SERVICE_URL` | `http://localhost:8000` | Địa chỉ ML |
 | `ML_TIMEOUT_MS` | `1200` | Timeout gọi ML (ngắn để không chậm API) |
 | `ML_INTERNAL_TOKEN` | rỗng | Gửi kèm `X-Internal-Token`; phải trùng ML |
 | `SEED_ADMIN_*` | — | Tài khoản admin do seed tạo |
@@ -192,7 +191,7 @@ Các model hiện có sẵn:
 
 | Biến | Mặc định | Ý nghĩa |
 | :--- | :--- | :--- |
-| `ML_HOST` | `127.0.0.1` | Chỉ bind loopback |
+| `ML_HOST` | `localhost` | Chỉ bind loopback |
 | `ML_PORT` | `8000` | Cổng ML |
 | `ML_INTERNAL_TOKEN` | rỗng | Nếu đặt, `/admin/*` yêu cầu `X-Internal-Token` |
 | `DATABASE_URL` | rỗng | **Tài khoản read-only**; thiếu thì `/ranking/featured` trả 503 |
@@ -227,6 +226,10 @@ Response trả `brandId` + `brand: { id, name }`; body tạo/sửa sản phẩm 
 (không còn `brand` free-text, bảng chi tiết không lưu thương hiệu). Quản lý thương hiệu qua
 `/api/brands` (GET công khai, POST/PUT/DELETE yêu cầu admin).
 
+Bộ lọc theo danh mục ở `GET /api/products?slug=` và `GET /api/brands?slug=` nhận **một slug**
+hoặc nhiều slug cách nhau bởi dấu phẩy (`slug=chuot,ban-phim`), dịch thành `category.slug IN (…)`.
+Frontend dùng cho trang nhóm `/danh-muc/gaming-gear`, `/danh-muc/office-gear`.
+
 Đánh giá sản phẩm (khách chấm sao, không cần mua hàng):
 
 | Method | Path | Quyền | Mô tả |
@@ -236,8 +239,8 @@ Response trả `brandId` + `brand: { id, name }`; body tạo/sửa sản phẩm 
 | DELETE | `/api/products/:id/rating` | Đăng nhập | Rút phiếu của mình → `{ rating, ratingCount, myScore: null }` |
 
 `Product.rating` là trung bình cache tự tính từ bảng `ratings` (unique `user_id + product_id`,
-CHECK score 1–5); admin không còn nhận `rating` trong POST/PUT products. ML vẫn chỉ đọc
-`p.rating` như cũ. Mọi thao tác ghi khoá dòng product (`FOR UPDATE`) trong transaction trước
+CHECK score 1–5); admin không còn nhận `rating` trong POST/PUT products. Model nổi bật tổng hợp
+trực tiếp bảng `ratings`; dữ liệu train sản phẩm tương tự vẫn đọc `p.rating`. Mọi thao tác ghi khoá dòng product (`FOR UPDATE`) trong transaction trước
 khi aggregate + update cache. Rating seed hiển thị tới phiếu thật đầu tiên; hết phiếu về 0.
 
 Review (chỉ người đã mua — có đơn không huỷ chứa sản phẩm):
@@ -269,10 +272,11 @@ Quản trị mở rộng:
 | :--- | :--- | :--- | :--- |
 | GET | `/api/admin/users` | Admin | `?page&limit&search&role&isLocked`, không lộ password/token |
 | PATCH | `/api/admin/users/:id/lock` · `/:id/role` | Admin | Khoá/mở, đổi role; không cho tự thao tác lên mình |
-| POST | `/api/admin/uploads` | Admin | multipart `image` ≤ 5MB → Supabase Storage; chưa cấu hình trả 503 |
+| GET | `/api/admin/orders` · `/:id` | Admin | Danh sách (kèm `user: { id, username, email }`, lọc `from`/`to` theo `APP_TIME_ZONE`) và chi tiết một đơn bất kỳ |
+| POST | `/api/admin/uploads` | Admin | JSON `{ imageUrl }` hoặc multipart `image` ≤ 5MB → `{ url, source, ... }`; nhánh file cần Supabase Storage |
 | GET | `/api/admin/stats/overview` | Admin | User/sản phẩm/đơn theo trạng thái/doanh thu delivered |
 | GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — chỉ đơn delivered |
-| GET | `/api/admin/stats/top-products` | Admin | `?limit` — theo số lượng bán, bỏ đơn huỷ |
+| GET | `/api/admin/stats/top-products` | Admin | `?limit` — số lượng bán trong đơn đã giao |
 | GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` |
 
 Các endpoint ML-related:
@@ -383,21 +387,24 @@ cd backend/ml-service
 .\venv\Scripts\python.exe scripts\train.py --model fp_growth
 .\venv\Scripts\python.exe scripts\train.py --model kmeans
 .\venv\Scripts\python.exe scripts\train.py --model svm
+.\venv\Scripts\python.exe scripts\train.py --model featured --source db
 
 # Reload nóng, không cần restart uvicorn
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/admin/reload" `
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/admin/reload" `
   -Headers @{ "X-Internal-Token" = "<token>" }
 ```
 
 `scripts\train.py` ghi kèm `<ten_model>.manifest.json` (version, thời điểm train, metrics) vào `models/`.
 `/models` và `/ready` đọc manifest để báo version.
 
+Model nổi bật dùng Decision Tree entropy (sklearn CART), với rating, rating_count, positive_ratio và sold_count (số đơn vị hàng đã giao). `--model featured --source db` xuất dữ liệu + nhãn mẫu sang `data/featured.csv` rồi train; không ghi nhãn vào DB. Nhãn 1 khi rating >= 4.2, positive_ratio >= 0.75 và (rating_count >= 3 hoặc sold_count >= 3), còn lại 0. Dùng `--source csv` để giữ nhãn đã chỉnh tay. Chi tiết và giới hạn của nhãn mẫu: [ML README](../backend/ml-service/README.md).
+
 Thêm model mới:
 
-1. Tạo class + `save/load` trong thư mục `ml_service/algorithms/<thuat_toan>/`.
-2. Thêm `ModelSpec` vào `ml_service/model_store.py`, trỏ path vào `models/`.
-3. Thêm schema/response vào `ml_service/schemas.py`, router tương ứng trong `ml_service/routers/`.
-4. Đăng ký router trong `ml_service/main.py`.
+1. Tạo class + `save/load` trong thư mục `src/algorithms/<thuat_toan>/`.
+2. Thêm `ModelSpec` vào `src/model_store.py`, trỏ path vào `models/`.
+3. Thêm schema/response vào `src/schemas.py`, router tương ứng trong `src/routers/`.
+4. Đăng ký router trong `src/main.py`.
 5. Gọi `_write_manifest(save_path, metrics)` trong `scripts\train.py`.
 6. Thêm test vào `backend/ml-service/tests/test_api.py`.
 
@@ -412,13 +419,12 @@ cd backend/ml-service
 .\venv\Scripts\python.exe -m pytest -q
 ```
 
-Test hiện có (6): health, ready đủ model, similar, parse trong phạm vi, parse ngoài phạm vi,
-personalized cold-start.
+Test hiện có (9): health, ready đủ model, similar, parse trong/ngoài phạm vi, personalized cold-start,
+và Decision Tree (lưu/nạp, sức mua, tồn kho, nhãn, API nổi bật). Không cần database.
 
 ### Business service
 
-Thư mục `tests/` và toàn bộ cấu hình test framework cũ đã được xoá. Bộ test backend sẽ được viết lại sau
-bằng công cụ khác. Trong thời gian đó, kiểm tra API thủ công bằng HTTP/Postman.
+Chạy `npm run test:admin` và `npm run test:images` trong `backend/business-service`: Node test runner kiểm tra hồi quy admin và hai nguồn ảnh (link/file, quyền, giới hạn upload, Storage HTTP giả lập). Test không ghi DB hay upload ra ngoài. Các API khác tiếp tục kiểm tra thủ công bằng HTTP/Postman.
 
 > **Cảnh báo:** bất kỳ test nào gọi `resetDatabase()` kiểu cũ sẽ xoá sạch dữ liệu thật trên
 > Supabase. Không chạy test trên `DATABASE_URL` đang trỏ DB thật; hãy tạo DB test riêng nếu cần.
@@ -445,8 +451,8 @@ bằng công cụ khác. Trong thời gian đó, kiểm tra API thủ công bằ
 - Không đọc `.joblib` theo từng request; luôn qua `store.get(key)`.
 - Không ghi DB. `db/config.py` mặc định `commit=False`.
 - Log lỗi bằng `logger.exception`, trả `HTTPException` có mã phù hợp.
-- Không import `ml_service.*` từ trong các package thuật toán (`ml_service/algorithms/*`) để giữ chúng độc lập, testable.
-- Chạy service: `.\venv\Scripts\python.exe -m uvicorn ml_service.main:app` từ thư mục `backend/ml-service`.
+- Không import `src.*` từ trong các package thuật toán (`src/algorithms/*`) để giữ chúng độc lập, testable.
+- Chạy service: `.\venv\Scripts\python.exe -m uvicorn src.main:app` từ thư mục `backend/ml-service`.
 
 ---
 
@@ -456,7 +462,7 @@ bằng công cụ khác. Trong thời gian đó, kiểm tra API thủ công bằ
 | :--- | :--- | :--- |
 | Business service trả `source: "fallback"` liên tục | ML chưa chạy / sai `ML_SERVICE_URL` | Mở `:8000/health`; kiểm tra `.env` |
 | `/ranking/featured` trả 503 | ML thiếu `DATABASE_URL` | Tạo `backend/ml-service/.env`, dùng role read-only |
-| `npm run` không có lệnh test | Bộ test backend đã được xoá, sẽ viết lại sau | Xem mục 9 |
+| Kiểm thử phần admin | Dùng Node test runner | Chạy `npm run test:admin`, xem mục 9 |
 | Model không load | Thiếu `.joblib` hoặc lệch version sklearn | Chạy `train.py`, xem `/models` để đọc lỗi |
 | Tìm kiếm trả quá nhiều sản phẩm | Query không bóc được ràng buộc → fallback tìm theo tên | Kiểm tra `/search/parse` trước |
 | Tiếng Việt lỗi khi gọi PowerShell | Encoding terminal | Dùng `Invoke-RestMethod` với URL đã encode, hoặc gọi qua Postman |
@@ -467,7 +473,7 @@ bằng công cụ khác. Trong thời gian đó, kiểm tra API thủ công bằ
 
 - [ ] Không có `.env`, token, password, connection string thật trong diff.
 - [ ] `node --check` các file business service đã sửa.
-- [ ] `pytest -q` (ML) pass; API business service được kiểm tra thủ công (chưa có bộ test).
+- [ ] `pytest -q` (ML) và `npm run test:admin` (BE) pass; các API khác kiểm tra thủ công.
 - [ ] Endpoint mới đã cập nhật `backend/business-service/README.md` / `backend/ml-service/README.md`.
 - [ ] ML vẫn chỉ trả `product_id` + score; fallback vẫn hoạt động khi tắt ML.
 - [ ] Giữ nguyên cấu trúc `backend/business-service/` và `backend/ml-service/`.

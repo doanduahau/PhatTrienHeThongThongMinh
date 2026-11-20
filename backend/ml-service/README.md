@@ -10,7 +10,7 @@ ML service dùng FastAPI, chỉ đọc PostgreSQL và **chỉ trả `product_id`
 
 ```text
 backend/ml-service/
-├── ml_service/                   # Package ML service (chạy: uvicorn ml_service.main:app)
+├── src/                   # Package ML service (chạy: uvicorn src.main:app)
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI app, lifespan preload model
 │   ├── config.py                 # Settings từ .env + ROOT_DIR/DATA_DIR/MODELS_DIR
@@ -29,35 +29,33 @@ backend/ml-service/
 │   │   ├── cosine_kmeans/        # Cosine + K-Means (gợi ý cá nhân hóa)
 │   │   ├── fp_growth/            # FP-Growth (thường mua kèm)
 │   │   ├── svm_regex/            # SVM + Regex (tìm kiếm thông minh)
-│   │   └── rating_baseline/      # Baseline (sản phẩm nổi bật)
+│   │   └── decision_tree/        # Decision Tree (sản phẩm nổi bật)
 │   └── db/
 │       ├── config.py             # Kết nối PostgreSQL read-only
-│       ├── repository.py         # Truy vấn DB cho ML
-│       ├── schema.sql
-│       └── seed/                 # SQL seed dữ liệu mẫu
+│       └── repository.py         # Truy vấn đọc dữ liệu cho train/ranking
 ├── scripts/                      # Script chạy trực tiếp (không cần pip install -e)
 │   ├── train.py                  # Huấn luyện tất cả / từng model
-│   └── demo.py                   # Kiểm thử trực quan tổng hợp (từ test.py cũ)
+│   └── demo.py                   # Kiểm thử trực quan tổng hợp
 ├── models/                       # Model .joblib + manifest (được train.py xuất ra)
 ├── data/                         # CSV huấn luyện (không commit model lớn)
 ├── tests/                        # Smoke test pytest
 │   └── test_api.py
 ├── .env.example                  # Ví dụ biến môi trường (.env không commit)
 ├── pytest.ini                    # Cấu hình pytest
+├── pytest.ini                    # Cấu hình pytest
 ├── README.md
 └── requirements.txt              # Thư viện Python (fastapi, uvicorn, psycopg2, sklearn, ...)
 ```
 
-Thư mục thuật toán (`algorithms/*`) được giữ độc lập, không import `ml_service.*` để có thể train/test riêng lẻ.
+Thư mục thuật toán (`algorithms/*`) được giữ độc lập, không import `src.*` để có thể train/test riêng lẻ.
 
 ---
 
-## 2. Quản lý Cơ sở dữ liệu (`ml_service/db/`)
+## 2. Quản lý Cơ sở dữ liệu (`src/db/`)
 
-* [`ml_service/db/config.py`](./ml_service/db/config.py): Kết nối PostgreSQL, đọc `DATABASE_URL` từ `.env`. Mặc định `get_cursor(commit=False)` vì service **chỉ đọc**.
-* [`ml_service/db/schema.sql`](./ml_service/db/schema.sql): Tài liệu tham khảo DDL. **Prisma trong `backend/` là nguồn schema chính** — không chạy file này đè lên DB đang dùng.
-* [`ml_service/db/seed/`](./ml_service/db/seed): SQL seed dữ liệu mẫu.
-* [`ml_service/db/seed/seed_runner.py`](./ml_service/db/seed/seed_runner.py): Script chạy seed (chỉ dùng khi cần).
+* [`src/db/config.py`](./src/db/config.py): Kết nối PostgreSQL, đọc `DATABASE_URL` từ `.env`. Mặc định `get_cursor(commit=False)` vì service **chỉ đọc**.
+* Schema, migration và seed do Prisma tại `backend/business-service/prisma/` quản lý. ML không có bộ schema/seed riêng.
+* Demo tìm kiếm gọi business service tại `http://localhost:5000` để lấy sản phẩm; có thể đổi qua biến `BUSINESS_SERVICE_URL`. ML chỉ phân tích câu tìm kiếm.
 
 ### Tài khoản read-only
 
@@ -78,7 +76,7 @@ Nếu dùng Supabase, tạo role/user read-only tương ứng rồi lấy connec
 Sao chép từ [`.env.example`](./.env.example):
 
 ```env
-ML_HOST=127.0.0.1
+ML_HOST=localhost
 ML_PORT=8000
 ML_INTERNAL_TOKEN=doi_thanh_chuoi_bi_mat_noi_bo
 
@@ -107,17 +105,17 @@ Không cần Docker cho service Python. Chạy trực tiếp bằng `venv`.
 
 ```powershell
 cd backend/ml-service
-.\venv\Scripts\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000 --reload
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host localhost --port 8000 --reload
 ```
 
-Lần khởi động đầu tiên sẽ nạp 4 model `.joblib` vào bộ nhớ (xem log). Service **chỉ bind `127.0.0.1`** và được backend gọi nội bộ.
+Lần khởi động đầu tiên sẽ nạp 5 model `.joblib` vào bộ nhớ (xem log). Service **chỉ bind `localhost`** và được backend gọi nội bộ.
 
 Kiểm tra:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health
-Invoke-RestMethod http://127.0.0.1:8000/ready
-Invoke-RestMethod http://127.0.0.1:8000/models
+Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://localhost:8000/ready
+Invoke-RestMethod http://localhost:8000/models
 ```
 
 ### Endpoint
@@ -137,10 +135,10 @@ Invoke-RestMethod http://127.0.0.1:8000/models
 Ví dụ:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/recommend/similar `
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/recommend/similar `
   -ContentType "application/json" -Body '{"product_id":1,"top_n":3}'
 
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/search/parse `
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/search/parse `
   -ContentType "application/json; charset=utf-8" `
   -Body ([Text.Encoding]::UTF8.GetBytes('{"query":"chuột không dây dưới 2 triệu"}'))
 ```
@@ -160,6 +158,7 @@ File [`scripts/train.py`](./scripts/train.py) là entrypoint chính để huấn
 .\venv\Scripts\python.exe scripts\train.py --model fp_growth  # Thường mua kèm
 .\venv\Scripts\python.exe scripts\train.py --model kmeans     # Gợi ý cá nhân hóa
 .\venv\Scripts\python.exe scripts\train.py --model svm        # Phân loại intent tìm kiếm
+.\venv\Scripts\python.exe scripts\train.py --model featured   # Nổi bật, từ data/featured.csv
 
 # 3. Huấn luyện trực tiếp từ PostgreSQL (cần DATABASE_URL):
 .\venv\Scripts\python.exe scripts\train.py --source db
@@ -167,12 +166,24 @@ File [`scripts/train.py`](./scripts/train.py) là entrypoint chính để huấn
 
 Mỗi lần train, `scripts/train.py` ghi thêm `<ten_model>.manifest.json` (version, thời điểm train, metrics) cạnh file `.joblib` trong `models/`. `/models` và `/ready` đọc manifest này.
 
+### Sản phẩm nổi bật: Decision Tree
+
+Chạy `.\venv\Scripts\python.exe scripts\train.py --model featured --source db` để đọc dữ liệu DB, xuất `data/featured.csv`, rồi train từ CSV. Nhãn `featured_label` chỉ nằm trong CSV, không thêm cột hay ghi nhãn vào DB. Dùng `--model featured --source csv` để train lại với nhãn đã chỉnh tay; lệnh `--source db` sẽ xuất lại dữ liệu và tạo lại nhãn mẫu.
+
+Bốn đặc trưng: `rating` (trung bình từ bảng ratings), `rating_count`, `positive_ratio` (tỷ lệ điểm >= 4), `sold_count` (tổng số đơn vị hàng trong đơn đã giao, trạng thái `delivered`). Chỉ hiển thị sản phẩm còn hàng.
+
+Nhãn mẫu = 1 khi rating >= 4.2, positive_ratio >= 0.75 và (rating_count >= 3 hoặc sold_count >= 3); còn lại = 0. Đây là nhãn tạo bằng quy tắc để minh họa học có giám sát, không phải nhãn nổi bật được kiểm chứng độc lập. Holdout chỉ đo độ khớp với các nhãn mẫu này.
+
+Dùng `DecisionTreeClassifier(criterion="entropy", max_depth=3, min_samples_leaf=5)` của sklearn (CART, không phải cài đặt C4.5). API dùng model đã train để phân lớp từ đặc trưng mới nhất; điểm trả về là xác suất lớp nổi bật, khi bằng điểm ưu tiên nhiều đánh giá hơn. Không train trong request.
+
+Lần train hiện tại có 405 sản phẩm (165 nhãn 1, 240 nhãn 0). Sức mua đều bằng 0 nên cây chưa học được ảnh hưởng của thuộc tính này. Khi có đơn đã giao, chạy lại lệnh DB ở trên rồi reload model.
+
 ### Reload nóng sau khi train
 
 Không cần restart uvicorn:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/admin/reload `
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/admin/reload `
   -Headers @{ "X-Internal-Token" = "<token trong .env>" }
 ```
 
@@ -189,25 +200,25 @@ cd backend/ml-service
 .\venv\Scripts\python.exe -m pytest -q
 ```
 
-Bộ test hiện có 6 case: health, ready đủ model, similar, parse trong phạm vi, parse ngoài phạm vi, personalized cold-start. Test không cần database.
+Bộ test có 9 case, gồm smoke test API và kiểm tra Decision Tree: lưu/nạp model, học sức mua, lọc hết hàng, kiểm tra nhãn và API nổi bật. Test không cần database.
 
 ### B. Kiểm thử trực quan từng khối thuật toán (Standalone)
 
 ```powershell
 # 1. Cosine Similarity (Sản phẩm tương tự)
-.\venv\Scripts\python.exe ml_service\algorithms\cosine\demo.py --id 1 --top 4
+.\venv\Scripts\python.exe src\algorithms\cosine\demo.py --id 1 --top 4
 
 # 2. FP-Growth (Gợi ý mua kèm)
-.\venv\Scripts\python.exe ml_service\algorithms\fp_growth\demo.py --ids 1 15 --top 4
+.\venv\Scripts\python.exe src\algorithms\fp_growth\demo.py --ids 1 15 --top 4
 
 # 3. Cosine + K-Means (Gợi ý cá nhân hóa cho User)
-.\venv\Scripts\python.exe ml_service\algorithms\cosine_kmeans\demo.py --user 1 --top 4
+.\venv\Scripts\python.exe src\algorithms\cosine_kmeans\demo.py --user 1 --top 4
 
 # 4. SVM + Regex (Tìm kiếm thông minh)
-.\venv\Scripts\python.exe ml_service\algorithms\svm_regex\demo.py --query "chuột gaming không dây siêu nhẹ claw grip dưới 2 triệu"
+.\venv\Scripts\python.exe src\algorithms\svm_regex\demo.py --query "chuột gaming không dây siêu nhẹ claw grip dưới 2 triệu"
 
-# 5. Rating Baseline (Xếp hạng sản phẩm nổi bật)
-.\venv\Scripts\python.exe ml_service\algorithms\rating_baseline\demo.py --top 5
+# 5. Decision Tree (Xếp hạng sản phẩm nổi bật)
+.\venv\Scripts\python.exe src\algorithms\decision_tree\demo.py --top 5
 ```
 
 ### C. Kiểm thử tổng hợp (`scripts/demo.py`)
@@ -222,8 +233,8 @@ Bộ test hiện có 6 case: health, ready đủ model, similar, parse trong ph�
 
 ## 7. Quy ước khi mở rộng service
 
-- Không đọc `.joblib` theo từng request — luôn dùng `store.get(key)` trong `ml_service/model_store.py`.
-- Thêm model mới: tạo class `save/load`, thêm `ModelSpec`, thêm router/schema, đăng ký trong `ml_service/main.py`, ghi manifest trong `scripts/train.py`, thêm test.
+- Không đọc `.joblib` theo từng request — luôn dùng `store.get(key)` trong `src/model_store.py`.
+- Thêm model mới: tạo class `save/load`, thêm `ModelSpec`, thêm router/schema, đăng ký trong `src/main.py`, ghi manifest trong `scripts/train.py`, thêm test.
 - Router chỉ nên mỏng: Pydantic validate → gọi model → map response.
 - Không ghi DB. Không trả giá/tồn kho/ảnh từ ML.
-- Không import `ml_service.*` từ các package thuật toán để giữ chúng độc lập và testable.
+- Không import `src.*` từ các package thuật toán để giữ chúng độc lập và testable.

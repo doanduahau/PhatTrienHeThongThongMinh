@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { AppError } from "./AppError.js";
 import { detailSchemas } from "../validators/product.validator.js";
 import { toFieldErrors } from "../validators/validate.js";
@@ -49,6 +48,3 @@ export const parseDetail = (slug, detail) => {
 
   return { model, data: result.data };
 };
-
-/** Loại bỏ các giá trị null/rỗng không cần thiết trước khi ghi Prisma */
-export const toPrismaDecimal = (value) => new Prisma.Decimal(value);

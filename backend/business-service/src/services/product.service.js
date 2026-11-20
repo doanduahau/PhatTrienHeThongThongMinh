@@ -9,6 +9,11 @@ const brandSelect = { id: true, name: true };
 const productRelationsInclude = {
   category: { select: categorySelect },
   brand: { select: brandSelect },
+  mouse: true,
+  keyboard: true,
+  headphone: true,
+  setup: true,
+  mousepad: true,
 };
 
 const sortMap = {
@@ -19,18 +24,169 @@ const sortMap = {
   rating_desc: { rating: "desc" },
 };
 
-const buildWhere = ({ categoryId, brandId, brand, slug, search }) => {
+// Bảng mice/keyboards dùng bộ giá trị riêng, bảng headphones dùng bộ khác.
+const CONNECTIVITY_BY_TABLE = {
+  mouse: ["wired", "wireless", "tri_mode"],
+  keyboard: ["wired", "wireless", "tri_mode"],
+  headphone: ["wired_3.5mm", "wireless_2.4g", "bluetooth"],
+};
+
+const POLLING_TABLES = ["mouse", "keyboard"];
+
+const slugList = (slug) =>
+  String(slug ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+/**
+ * Cột chia sẻ giữa nhiều bảng chi tiết (connectivity, polling_rate_hz) phải được áp vào
+ * đúng bảng của danh mục đang xem. Trước đây hàm luôn gán vào bảng mouse trước rồi mới
+ * tới keyboard/headphone có điều kiện "!where.mouse", nên trang Bàn phím và Tai nghe lọc
+ * ra 0 kết quả: sản phẩm của chúng không có dòng ở bảng mice.
+ */
+const buildWhere = ({
+  categoryId,
+  brandId,
+  brand,
+  slug,
+  search,
+  inStock,
+  minPrice,
+  maxPrice,
+  connectivity,
+  handOrientation,
+  minWeight,
+  maxWeight,
+  pollingRate,
+  switchType,
+  layout,
+  hasRapidTrigger,
+  hasHotswap,
+  supportMacos,
+  headphoneType,
+  hasMic,
+  hasAnc,
+  padType,
+  mouseControl,
+  base,
+  size,
+  surface,
+  speed,
+  setupCategory,
+  maxLoadKg,
+}) => {
   const where = {};
   if (categoryId) where.categoryId = categoryId;
   if (brandId) where.brandId = brandId;
   if (brand) where.brand = { name: { contains: brand, mode: "insensitive" } };
-  if (slug) where.category = { slug };
+  // `slug` nhận một slug hoặc danh sách slug phân tách bởi dấu phẩy (trang nhóm).
+  const slugs = slugList(slug);
+  if (slugs.length) where.category = { slug: { in: slugs } };
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
       { brand: { name: { contains: search, mode: "insensitive" } } },
     ];
   }
+  if (inStock === "1" || inStock === "true" || inStock === true) {
+    where.stockQuantity = { gt: 0 };
+  }
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+    if (minPrice !== undefined && minPrice !== "") where.price.gte = Number(minPrice);
+    if (maxPrice !== undefined && maxPrice !== "") where.price.lte = Number(maxPrice);
+  }
+
+  // Các bảng chi tiết mà tập slug đang xem dùng; rỗng = trang toàn catalog (mở cho mọi bảng).
+  const tables = slugs.map((value) => getDetailModel(value)).filter(Boolean);
+  const isOpenTo = (table) => tables.length === 0 || tables.includes(table);
+
+  /**
+   * Điều kiện khớp bất kỳ bảng chi tiết nào thuộc danh mục đang xem.
+   * Không bảng nào mang thuộc tính này thì không sản phẩm nào khớp được.
+   */
+  const matchAnyDetail = (conditionByTable) => {
+    const or = Object.entries(conditionByTable)
+      .filter(([table]) => isOpenTo(table))
+      .map(([table, condition]) => ({ [table]: condition }));
+    if (or.length === 0) {
+      where.id = { in: [] };
+      return;
+    }
+    where.AND = [...(where.AND ?? []), { OR: or }];
+  };
+
+  if (connectivity) {
+    matchAnyDetail(
+      Object.fromEntries(
+        Object.entries(CONNECTIVITY_BY_TABLE)
+          .filter(([, values]) => values.includes(connectivity))
+          .map(([table]) => [table, { connectivity }]),
+      ),
+    );
+  }
+
+  if (pollingRate) {
+    matchAnyDetail(
+      Object.fromEntries(
+        POLLING_TABLES.map((table) => [table, { pollingRateHz: Number(pollingRate) }]),
+      ),
+    );
+  }
+
+  // Mouse filters
+  const mouseWhere = {};
+  if (handOrientation) mouseWhere.handOrientation = handOrientation;
+  if (minWeight !== undefined || maxWeight !== undefined) {
+    mouseWhere.weightG = {};
+    if (minWeight !== undefined && minWeight !== "") mouseWhere.weightG.gte = Number(minWeight);
+    if (maxWeight !== undefined && maxWeight !== "") mouseWhere.weightG.lte = Number(maxWeight);
+  }
+  if (switchType) mouseWhere.switchType = { contains: switchType, mode: "insensitive" };
+  if (Object.keys(mouseWhere).length > 0) where.mouse = mouseWhere;
+
+  // Keyboard filters
+  const keyboardWhere = {};
+  if (layout) keyboardWhere.layout = layout;
+  if (hasRapidTrigger !== undefined && hasRapidTrigger !== "") {
+    keyboardWhere.hasRapidTrigger = hasRapidTrigger === true || hasRapidTrigger === "true" || hasRapidTrigger === "1";
+  }
+  if (hasHotswap !== undefined && hasHotswap !== "") {
+    keyboardWhere.hasHotswap = hasHotswap === true || hasHotswap === "true" || hasHotswap === "1";
+  }
+  if (supportMacos !== undefined && supportMacos !== "") {
+    keyboardWhere.supportMacos = supportMacos === true || supportMacos === "true" || supportMacos === "1";
+  }
+  if (Object.keys(keyboardWhere).length > 0) where.keyboard = keyboardWhere;
+
+  // Headphone filters
+  const headphoneWhere = {};
+  if (headphoneType) headphoneWhere.headphoneType = headphoneType;
+  if (hasMic !== undefined && hasMic !== "") {
+    headphoneWhere.hasMic = hasMic === true || hasMic === "true" || hasMic === "1";
+  }
+  if (hasAnc !== undefined && hasAnc !== "") {
+    headphoneWhere.hasAnc = hasAnc === true || hasAnc === "true" || hasAnc === "1";
+  }
+  if (Object.keys(headphoneWhere).length > 0) where.headphone = headphoneWhere;
+
+  // Mousepad filters
+  const padWhere = {};
+  if (padType) padWhere.padType = padType;
+  if (mouseControl) padWhere.mouseControl = mouseControl;
+  if (base) padWhere.base = base;
+  if (size) padWhere.size = size;
+  if (surface) padWhere.surface = surface;
+  if (speed) padWhere.speed = speed;
+  if (Object.keys(padWhere).length > 0) where.mousepad = padWhere;
+
+  // Setup filters
+  const setupWhere = {};
+  if (setupCategory) setupWhere.setupCategory = setupCategory;
+  if (maxLoadKg !== undefined && maxLoadKg !== "") setupWhere.maxLoadKg = { gte: Number(maxLoadKg) };
+  if (Object.keys(setupWhere).length > 0) where.setup = setupWhere;
+
   return where;
 };
 
@@ -57,9 +213,10 @@ export const getAll = async ({ page, limit, sort, ...filters }) => {
   ]);
 
   return {
-    items: items.map(({ stockQuantity, ...item }) => ({
+    items: items.map(({ mouse, keyboard, headphone, setup, mousepad, ...item }) => ({
       ...item,
-      isInStock: stockQuantity > 0,
+      isInStock: item.stockQuantity > 0,
+      detail: mouse || keyboard || headphone || setup || mousepad || null,
     })),
     pagination: {
       page,
@@ -191,5 +348,14 @@ export const update = async (id, payload) => {
 export const remove = async (id) => {
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) throw notFound("Không tồn tại sản phẩm!");
+
+  // Sản phẩm đã có trong order_items (FK Restrict) thì xoá sẽ ném lỗi P2003 →
+  // trả về 400 thân thiện cho admin UI thay vì 500 "lỗi máy chủ".
+  const linked = await prisma.orderItem.findFirst({
+    where: { productId: id },
+    select: { id: true },
+  });
+  if (linked) throw badRequest("Sản phẩm đã có trong đơn hàng, không thể xoá!");
+
   return prisma.product.delete({ where: { id } });
 };

@@ -7,6 +7,7 @@ const router = Router();
 router.use(authenticate, requireAdmin);
 
 router.get("/", orderController.getAllOrders);
+router.get("/:id", orderController.getOrderDetail);
 router.patch("/:id/status", orderController.updateStatus);
 router.patch("/:id/payment", orderController.updatePaymentStatus);
 

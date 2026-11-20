@@ -5,6 +5,7 @@ import { authenticate, requireAdmin } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 router.get("/", categoryController.getAll);
+router.get("/:id", categoryController.getById);
 router.post("/", authenticate, requireAdmin, categoryController.create);
 router.put("/:id", authenticate, requireAdmin, categoryController.update);
 router.delete("/:id", authenticate, requireAdmin, categoryController.remove);

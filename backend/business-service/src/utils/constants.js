@@ -23,9 +23,6 @@ export const ALLOWED_TRANSITIONS = Object.freeze({
   [ORDER_STATUS.CANCELLED]: [],
 });
 
-/** Các trạng thái huỷ đơn cần hoàn tồn kho */
-export const RESTOCK_ON_CANCEL = [ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED];
-
 export const ORDER_STATUS_VALUES = Object.values(ORDER_STATUS);
 
 export const PAYMENT_METHOD = Object.freeze({

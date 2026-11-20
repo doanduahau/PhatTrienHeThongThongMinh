@@ -1,11 +1,19 @@
 import { z } from "zod";
 import { DB_ID_MAX, PAGINATION, PRODUCT_DETAIL_SLUGS } from "../utils/constants.js";
+import { imageUrlSchema } from "./image.validator.js";
 
 const connectivity3 = z.enum(["wired", "wireless", "tri_mode"], {
   errorMap: () => ({ message: "connectivity chỉ nhận: wired, wireless, tri_mode" }),
 });
 
 /* ------------------------------ Sản phẩm nền ------------------------------ */
+
+// Bỏ thuộc tính = giữ nguyên; gửi chuỗi rỗng/null/boolean = lỗi, không chuyển thành 0.
+const optionalFormNumber = (schema) => z.preprocess((value) => {
+  if (value === undefined || typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") return Number(value);
+  return Number.NaN;
+}, schema.optional());
 
 const brandIdField = z.preprocess(
   (value) => {
@@ -35,16 +43,12 @@ const baseProductFields = {
     .min(1, "Tên sản phẩm không được để trống!")
     .max(255, "Tên sản phẩm tối đa 255 ký tự!"),
   color: z.string().trim().max(50, "Màu sắc tối đa 50 ký tự!").optional(),
-  stockQuantity: z.coerce
-    .number()
+  stockQuantity: optionalFormNumber(z.number()
     .int("Số lượng tồn kho phải là số nguyên!")
     .min(0, "Tồn kho không được âm!")
-    .optional(),
-  imageUrl: z
-    .string({ required_error: "Ảnh sản phẩm là bắt buộc!" })
-    .trim()
-    .url("imageUrl phải là URL hợp lệ!"),
-  price: z.coerce.number({ required_error: "Giá là bắt buộc!" }).min(0, "Giá không được âm!").optional(),
+    .max(DB_ID_MAX, "Tồn kho vượt giới hạn cho phép!")),
+  imageUrl: imageUrlSchema,
+  price: optionalFormNumber(z.number().finite().min(0, "Giá không được âm!").max(9999999999999.99, "Giá vượt giới hạn cho phép!")),
   // Không nhận rating từ admin: điểm do khách hàng vote, tự tính trong rating.service.js
 };
 
@@ -101,7 +105,31 @@ export const productQuerySchema = z.object({
   slug: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
   sort: z.enum(["newest", "price_asc", "price_desc", "name_asc", "rating_desc"]).default("newest"),
-});
+  inStock: z.union([z.string(), z.boolean()]).optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
+  connectivity: z.string().trim().optional(),
+  handOrientation: z.string().trim().optional(),
+  minWeight: z.coerce.number().optional(),
+  maxWeight: z.coerce.number().optional(),
+  pollingRate: z.coerce.number().optional(),
+  switchType: z.string().trim().optional(),
+  layout: z.string().trim().optional(),
+  hasRapidTrigger: z.union([z.string(), z.boolean()]).optional(),
+  hasHotswap: z.union([z.string(), z.boolean()]).optional(),
+  supportMacos: z.union([z.string(), z.boolean()]).optional(),
+  headphoneType: z.string().trim().optional(),
+  hasMic: z.union([z.string(), z.boolean()]).optional(),
+  hasAnc: z.union([z.string(), z.boolean()]).optional(),
+  padType: z.string().trim().optional(),
+  mouseControl: z.string().trim().optional(),
+  base: z.string().trim().optional(),
+  size: z.string().trim().optional(),
+  surface: z.string().trim().optional(),
+  speed: z.string().trim().optional(),
+  setupCategory: z.string().trim().optional(),
+  maxLoadKg: z.coerce.number().optional(),
+}).passthrough();
 
 export const productIdParamSchema = z.object({
   id: z.coerce

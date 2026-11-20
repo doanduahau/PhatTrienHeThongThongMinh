@@ -1,0 +1,54 @@
+"""Entrypoint FastAPI của ML service.
+
+Chạy từ thư mục ``backend/ml-service``::
+
+    .\\venv\\Scripts\\python.exe -m uvicorn src.main:app --host localhost --port 8000 --reload
+
+Service chỉ nên bind localhost và được gọi nội bộ từ backend.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from src.config import settings
+from src.model_store import store
+from src.routers import admin, health, ranking, recommend, search
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    logger.info("Đang nạp model AI...")
+    store.preload()
+    logger.info("ML service sẵn sàng tại http://%s:%s", settings.host, settings.port)
+    yield
+    logger.info("ML service dừng.")
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.version,
+    description="Các thuật toán gợi ý và tìm kiếm thông minh cho shop gear gaming.",
+    lifespan=lifespan,
+)
+
+app.include_router(health.router)
+app.include_router(recommend.router)
+app.include_router(search.router)
+app.include_router(ranking.router)
+app.include_router(admin.router)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import uvicorn
+
+    uvicorn.run("src.main:app", host=settings.host, port=settings.port, reload=True)

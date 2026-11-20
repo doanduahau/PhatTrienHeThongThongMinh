@@ -24,14 +24,14 @@ If the user's request or the brief is missing something you need (product, audie
 ## 1. Design Brief (edit this per project)
 
 ```
-Product:            <what it is, one sentence>
-Audience:           <who uses it>
-Primary job:        <the one thing a visitor/user must be able to do>
-Reference sites:    <e.g. apple.com, phongcachxanh.vn, mimo.xiaomi.com/coder>
-Direction:          Editorial minimalism. Product-first. Whitespace-driven.
-Tone of voice:      <plain, direct, friendly | technical | premium ...>
-Language of UI:     <Vietnamese | English>
-Real content:       <paste real headlines, product names, prices, image paths>
+Product:            Gear Shop — e-commerce gaming gear (chuột, bàn phím, tai nghe, lót chuột, ghế) with smart search + ML recommendations
+Audience:           Vietnamese gamers and desk-setup buyers who compare specs before buying
+Primary job:        Find the right product (browse or describe it in a sentence) and add it to cart
+Reference sites:    phongcachxanh.vn (layout rhythm + e-commerce patterns), apple.com (hero restraint)
+Direction:          Product-first storefront. Clean white canvas, blue accent, real product photos as the hero.
+Tone of voice:      Plain, direct, friendly Vietnamese. No marketing fluff.
+Language of UI:     Vietnamese
+Real content:       From business service API (:3000) — products, prices, images, stock. Never invent products, prices, ratings or reviews.
 ```
 
 If this block is empty, propose values from the user's request, show them in one short list, and continue unless the user corrects you.
@@ -118,28 +118,22 @@ These are the tells of generated UI. Do **not** use them unless the user explici
 Define tokens **first**, put them in one place (CSS variables / Tailwind config / theme file), and reference only tokens in components. No hard-coded one-off values.
 
 ### 4.1 Color
-Use at most **one accent color**. Everything else is neutral.
+Use at most **one accent color**. Everything else is neutral. Tokens live in `globals.css` (`:root`) **and** are mapped into the Tailwind theme (`@theme` in Tailwind v4, or `tailwind.config` `extend.colors` in v3). Components reference Tailwind token classes (`bg-bg`, `text-text-muted`, `bg-accent`) — never raw hex or default palette names like `blue-600`.
 
 ```css
 :root {
   --bg:            #FFFFFF;   /* page background */
-  --bg-subtle:     #F5F5F7;   /* alternate section background */
-  --text:          #1D1D1F;   /* primary text */
-  --text-muted:    #6E6E73;   /* secondary text */
-  --border:        #D2D2D7;   /* only when a boundary is truly needed */
-  --accent:        #0071E3;   /* the ONE accent: primary actions, links, focus */
+  --bg-subtle:     #F6F8FB;   /* alternate section background */
+  --text:          #111827;   /* primary text */
+  --text-muted:    #5B6472;   /* secondary text */
+  --border:        #E5E7EB;   /* only when a boundary is truly needed */
+  --accent:        #2457E6;   /* the ONE accent: primary actions, links, focus */
   --accent-text:   #FFFFFF;   /* text on accent */
-  --danger:        #D70015;   /* errors only */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:          #000000;
-    --bg-subtle:   #161617;
-    --text:        #F5F5F7;
-    --text-muted:  #A1A1A6;
-    --border:      #424245;
-  }
+  --accent-soft:   #EAF0FF;   /* secondary button background */
+  --danger:        #E11D48;   /* errors + sale price/badge only */
+  --star:          #F59E0B;   /* rating stars only */
+  --footer-bg:     #0B1220;   /* dark footer */
+  --footer-text:   #F8FAFC;
 }
 ```
 
@@ -151,8 +145,7 @@ Rules:
 - Warm cream + terracotta, or near-black + acid green, are common AI defaults. Use them only if the brief calls for them.
 
 ### 4.2 Typography
-- **One font family**, optionally a second clearly distinct family for display headings (e.g. serif for headlines). Never more than two.
-- Choose fonts deliberately for the brief. Safe defaults for Vietnamese support: `Inter`, `Be Vietnam Pro`, `Manrope`, `Plus Jakarta Sans`, system stack `-apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif`. Always confirm the font supports **Vietnamese diacritics** (latin-ext + vietnamese subsets).
+- **One font family**: `Be Vietnam Pro` (already used by the current frontend), loaded via `next/font/google` with `subsets: ['latin', 'vietnamese']` — this self-hosts the font and removes layout shift. No `<link>` to Google Fonts in `layout.tsx`.
 - Load only the weights you use (usually 400, 500/600, 700).
 
 Type scale (desktop / mobile, fluid with `clamp()` is preferred):
@@ -181,7 +174,8 @@ Use an 8px base scale: `4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 160, 200`.
 - Section vertical padding: **96-160px desktop**, **64-96px mobile**.
 - Space between headline and its supporting line: 12-16px.
 - Space between supporting line and buttons: 24-32px.
-- Content container: `max-width: 1200px` for layout, `max-width: 680px` for reading text, centered with side padding 24px (mobile) / 40px (desktop).
+- Content container: `max-width: 1440px` for storefront layout (product grids need width), `max-width: 680px` for reading text, centered with side padding 20px (mobile) / 40px (desktop). Implement once as a `Container` component or a `container` theme override — not repeated `max-w-[1440px] mx-auto px-5` strings.
+- Section vertical rhythm for the storefront: 40-56px between blocks (tighter than editorial pages — shoppers scan many blocks).
 - When something feels cramped, increase spacing before adding any element.
 
 ### 4.4 Shape and elevation
@@ -193,6 +187,81 @@ Use an 8px base scale: `4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 160, 200`.
 ---
 
 ## 5. Layout Rules
+
+### 5.0 Target stack: Next.js (App Router) + Tailwind CSS
+
+The static HTML frontend (`frontend/*.html`) is being migrated to **Next.js App Router + Tailwind CSS + TypeScript**. All new UI work follows these rules:
+
+**Project structure**
+```
+frontend-next/
+  app/
+    layout.tsx              # root layout: font (next/font), Header, Footer, metadata
+    page.tsx                # homepage (server component, fetches featured/best-sellers)
+    san-pham/page.tsx       # listing + filters (searchParams-driven)
+    san-pham/[slug]/page.tsx# product detail
+    gio-hang/page.tsx       # cart (client)
+    dang-nhap/page.tsx      # login (client)
+    don-hang/page.tsx       # orders (client, auth)
+  components/
+    ui/                     # Button, Input, Badge, Skeleton, Container, SectionHeader
+    layout/                 # Header, MegaMenu, MobileDrawer, Footer
+    product/                # ProductCard, ProductGrid, PriceTag, RatingStars, ColorSwatches, QuickAdd
+    home/                   # HeroSlideshow, CategoryCarousel, UspRow, ShowroomBanner, Testimonials
+  lib/
+    api.ts                  # typed fetch wrapper for business service (:3000)
+    format.ts               # money/date formatting (vi-VN, 1.250.000 ₫)
+```
+
+**Server vs client components**
+- Default to **server components**: pages, product grids, detail content, anything that only renders API data. Fetch on the server, pass plain props down.
+- `"use client"` only at the interactive leaves: cart state, search box, slideshow controls, drawers, filters, quick-add button. Never mark a whole page client because one button needs state.
+- Cart/auth state: one client context provider (`CartProvider`) mounted in `layout.tsx`; server components never import it.
+
+**Data fetching**
+- All data comes from the business service (`NEXT_PUBLIC_API_URL`, default `http://localhost:3000/api`). One typed wrapper in `lib/api.ts`; no `fetch` scattered in components.
+- Use `next: { revalidate: 60 }` for catalog data; `cache: 'no-store'` for cart/orders/stock-sensitive reads.
+- ML-powered blocks (similar products, bundles, for-you, featured) are **enhancements**: render the block only if data arrives; the page must look complete when ML is down (the backend already falls back — the UI must too). Show skeletons while loading, never spinners over whole pages.
+- Smart search: the search box posts the natural-language query to the business service; render parsed intent (constraints/tags) as removable filter chips above results.
+
+**Tailwind rules**
+- Tailwind v4 (`@theme` in `globals.css`) or v3 config — pick one at setup and stay. Map every token from section 4 into the theme; components use token classes only (`bg-accent`, `text-muted`, `rounded-card`), never arbitrary values (`bg-[#2457E6]`) or default palette (`blue-600`).
+- No Tailwind CDN. No CSS modules alongside Tailwind; `globals.css` holds tokens + base styles only.
+- Extract a component when the same class string appears 3+ times (ProductCard, SectionHeader, Button variants via `cva` or a simple variants map).
+- Responsive prefixes mobile-first: base = mobile, `md:` = tablet, `lg:` = desktop. Product grid: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4`.
+
+**Next.js specifics**
+- `next/image` for every product image: explicit `sizes`, `priority` only on the hero/LCP image, remote patterns configured for the Supabase storage bucket. Placeholder: neutral `bg-subtle` box with fixed aspect ratio, never a broken img.
+- `next/link` for all internal navigation. Route names keep the current Vietnamese slugs (`/san-pham`, `/gio-hang`, `/dang-nhap`, `/don-hang`) so existing links/bookmarks survive.
+- `metadata` export per page (title/description in Vietnamese); `loading.tsx` with skeletons per route segment; `error.tsx` with a plain retry message; `not-found.tsx` for missing products.
+- Forms (login, checkout): server actions or route handlers calling the business service; JWT stored in an httpOnly cookie via a route handler — not localStorage.
+
+**Migration rules (HTML → Next.js)**
+1. Migrate one page at a time in this order: layout (Header/Footer) → home → listing → detail → cart → login → orders.
+2. Port structure and content, not old CSS. Rebuild styling from tokens; do not copy `app.css` rules into Tailwind `@apply` blocks.
+3. The old `frontend/` folder stays untouched as reference until the user confirms parity; then it can be removed.
+4. After each page: run `next build`, check the page at 390px and 1440px, verify no hydration warnings in the console.
+
+### 5.1 Storefront homepage layout (from phongcachxanh.vn)
+
+The homepage follows this block order. Alternate **commerce blocks** (grids) with **content blocks** (trust/story) so the page has rhythm:
+
+1. **Header** — sticky, white, 64px: logo left, search bar center, account + cart icons right (cart count badge). Below: horizontal category nav with mega-menu dropdowns (2-3 columns of plain text links). Mobile: left drawer.
+2. **Hero slideshow** — full-width product shots, each slide = image + short headline + ONE button. Numbered dots, arrows on hover, auto-advance pausable, honors reduced-motion.
+3. **Category carousel** — "Danh mục chính": image + name cards, horizontal scroll with prev/next. No prices, no descriptions.
+4. **Best-sellers grid** — SectionHeader ("Gear bán chạy" left + "Xem tất cả" link right) + 4-col ProductCard grid.
+5. **USP row** — 4 plain columns: small icon + short title + one sentence. No boxes, no borders. Content must be real commitments, not invented stats.
+6. **Showroom / media-with-text** — large photo one side, headline + one paragraph + one CTA other side. Skip this block if no real photo exists.
+7. **Second product grid** — e.g. accessories or "Gợi ý cho bạn" (ML personalized, falls back to featured).
+8. **Testimonials** — only with real reviews from the API. If none exist yet, omit the block entirely.
+9. **Footer** — dark (`--footer-bg`), columns: company info / support links / policies. Mobile: accordion. Newsletter form only if the backend supports it.
+
+Rules for every block:
+- One `SectionHeader` component everywhere: `h2` left, optional "Xem tất cả" link right. Same type size, same spacing.
+- Product cards may use card treatment (they are comparable objects — allowed by section 3), but keep chrome minimal: image, name, one support line, price, rating, swatches, quick-add. No shadows at rest.
+- Every block must render from real API data or be omitted. No hardcoded "fake shelf".
+
+### 5.2 General layout rules
 
 1. **Hero first.** The first viewport shows: one headline, one supporting line (optional), one or two buttons, and one dominant visual (product image/video/demo). Nothing else competes.
 2. Sections alternate between: (a) large visual + short headline, (b) text-led statement, (c) a simple grid of real items (products/categories) with no extra chrome.
@@ -243,6 +312,7 @@ ASCII wireframe of a typical section (for planning before coding):
 ### Product / item listing
 - Image (consistent aspect ratio), name, price. Optional single status text if real ("Out of stock").
 - Whole item is clickable. No separate "View details" button on every item.
+- Storefront ProductCard (per PCX pattern): primary image (swap to secondary on hover), sale badge only when a real discount exists, name, one support line, price ("Từ …" when variants have different prices), star rating only when real reviews exist, color swatches, and a quick-add button. Out-of-stock variants are visibly disabled, not hidden.
 
 ### Tables and data
 - Right-align numbers, tabular figures (`font-variant-numeric: tabular-nums`).
@@ -308,10 +378,10 @@ Build to this floor without announcing it:
 - Full keyboard operability, logical tab order, Esc closes overlays.
 
 **Performance**
-- Optimize and size images, lazy-load below the fold, preload the hero image and primary font.
+- Optimize and size images (`next/image`), lazy-load below the fold, `priority` only on the hero image; font via `next/font` (self-hosted, no external request).
 - Avoid heavy animation libraries and large dependencies for simple effects.
-- The Tailwind CDN script is for prototypes only. For a deployed site, compile Tailwind (or write plain CSS from the tokens) and say so in the final report.
-- Avoid layout shift (set image dimensions, reserve space for async content).
+- No Tailwind CDN — Tailwind is compiled by the Next.js build. Keep client JS small: check the route's First Load JS in `next build` output; a content page should not ship cart/menu logic it doesn't use.
+- Avoid layout shift (image dimensions, skeletons reserve space for async content).
 
 ---
 
@@ -382,14 +452,29 @@ Reply briefly: what was built, which tokens were chosen, which content is placeh
 - [ ] Headings use `text-wrap: balance`; no orphan words at 1440 / 1024 / 390px.
 - [ ] Nav active state does not change font-weight (no layout shift).
 
+**Next.js / migration**
+- [ ] `next build` passes; no hydration warnings; no TypeScript errors.
+- [ ] Server components by default; `"use client"` only on interactive leaves.
+- [ ] All data via `lib/api.ts` from the business service; page still complete when ML blocks return nothing.
+- [ ] Only theme token classes; no arbitrary hex/px values, no default Tailwind palette.
+- [ ] `next/image` + `next/link` everywhere; Vietnamese slugs preserved; metadata per page.
+- [ ] `loading.tsx` skeletons, `error.tsx`, `not-found.tsx` exist for each migrated route.
+
 ---
 
 ## 12. Quick Prompts (copy/paste to the agent)
 
 **Start a new page**
 ```
-Read UI-UX-SKILLS.md. Build the [page name] for [product]. Use only this real content: [paste].
-First write the plan (tokens, wireframe, content list), review it against section 3, then build one section at a time.
+Read UI-UX-SKILLS.md. Build the [page name] for Gear Shop in Next.js (App Router) + Tailwind, following section 5.0. Use only real data from the business service API.
+First write the plan (tokens, wireframe, content list, server/client split), review it against section 3, then build one section at a time.
+```
+
+**Migrate a page from the old HTML frontend**
+```
+Read UI-UX-SKILLS.md sections 5.0 and 5.1. Migrate frontend/[page].html to Next.js + Tailwind.
+Port structure and content only — rebuild styling from the tokens, do not copy app.css.
+Keep the Vietnamese route slug. Run next build and verify at 390px and 1440px before reporting.
 ```
 
 **Fix an AI-looking UI**
@@ -422,7 +507,7 @@ Remove 30% of the elements on this page. Keep only what helps the user understan
 ## 13. Reference Style Notes (what "good" looks like)
 
 - **apple.com:** black or white canvas, one huge headline, one subline, two buttons, a giant product image that fills the width. No cards, no icons, no stats. Hierarchy is only size, weight and space.
-- **phongcachxanh.vn:** full-width hero with a large product shot, a single headline, one white button; below it a plain heading ("Danh muc chinh") and a clean row of category items, each just an icon/image and a name.
+- **phongcachxanh.vn:** sticky white header (logo / search / account+cart) with mega-menu; full-width hero slideshow (product shot + short headline + one button); category carousel; alternating product grids and trust blocks (USP icons row, showroom media-with-text, real testimonials, brand logos); dark navy footer. Blue accent `#2457E6`, sale red, amber stars; card radius 12px, button 8px; container up to 1600px. Copy is friendly and concrete ("Bảo hành không drama"), never generic marketing.
 - **mimo.xiaomi.com/coder:** warm light background, centered title, one install command as the main action, three quiet secondary buttons, then a large illustrated feature panel with a short statement.
 
 Common thread: **one focal point per screen, big type, big space, real product, almost no chrome.**

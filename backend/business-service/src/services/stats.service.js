@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../clients/prisma.client.js";
 import { env } from "../config/env.js";
 import { ORDER_STATUS, PAYMENT_STATUS } from "../utils/constants.js";
-import { formatDate, formatIsoDate, formatMonthYear } from "../utils/date.js";
+import { endOfDayInAppTz, formatDate, formatIsoDate, formatMonthYear, startOfDayInAppTz } from "../utils/date.js";
 import { toNumber } from "../utils/money.js";
 
 export const getOverview = async () => {
@@ -35,8 +35,9 @@ export const getOverview = async () => {
 /** Doanh thu tính trên đơn đã giao (delivered). */
 export const getRevenue = async ({ groupBy, from, to }) => {
   const conditions = [Prisma.sql`status = ${ORDER_STATUS.DELIVERED}`];
-  if (from) conditions.push(Prisma.sql`created_at >= ${new Date(from)}`);
-  if (to) conditions.push(Prisma.sql`created_at <= ${new Date(to)}`);
+  // `from`/`to` là ngày theo APP_TIME_ZONE, khớp với cách cắt kỳ bên dưới.
+  if (from) conditions.push(Prisma.sql`created_at >= ${startOfDayInAppTz(from)}`);
+  if (to) conditions.push(Prisma.sql`created_at <= ${endOfDayInAppTz(to)}`);
 
   // created_at là TIMESTAMP không múi giờ chứa UTC: đổi sang giờ địa phương trước
   // khi cắt kỳ, rồi đổi về timestamptz để driver trả về đúng một mốc tuyệt đối.
@@ -72,7 +73,7 @@ export const getTopProducts = async (limit) => {
     FROM order_items oi
     JOIN orders o ON o.id = oi.order_id
     JOIN products p ON p.id = oi.product_id
-    WHERE o.status <> ${ORDER_STATUS.CANCELLED}
+    WHERE o.status = ${ORDER_STATUS.DELIVERED}
     GROUP BY p.id, p.name, p.image_url
     ORDER BY "soldQuantity" DESC, revenue DESC
     LIMIT ${limit}

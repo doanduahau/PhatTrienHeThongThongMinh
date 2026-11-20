@@ -8,6 +8,7 @@ import {
   PAYMENT_STATUS,
 } from "../utils/constants.js";
 import { idCode } from "./idCode.js";
+import { dateRangeFields, validateDateRange } from "./dateRange.js";
 
 export const createOrderSchema = z.object({
   shippingMethodId: idCode(ID_CODE_PREFIX.SHIPPING_METHOD, "shippingMethodId"),
@@ -55,18 +56,12 @@ export const myOrdersQuerySchema = z.object({
   status: z.enum(ORDER_STATUS_VALUES).optional(),
 });
 
-const isoDate = z
-  .string()
-  .trim()
-  .refine((value) => !Number.isNaN(Date.parse(value)), "Ngày không hợp lệ (YYYY-MM-DD)!");
-
 export const adminOrdersQuerySchema = z.object({
   ...pageFields,
   status: z.enum(ORDER_STATUS_VALUES).optional(),
   userId: z.coerce.number().int().positive().max(DB_ID_MAX, "userId không hợp lệ!").optional(),
-  from: isoDate.optional(),
-  to: isoDate.optional(),
-});
+  ...dateRangeFields,
+}).superRefine(validateDateRange);
 
 export const updateOrderStatusSchema = z.object({
   status: z.enum(ORDER_STATUS_VALUES, {

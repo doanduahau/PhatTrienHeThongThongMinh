@@ -2,6 +2,7 @@ import { prisma } from "../clients/prisma.client.js";
 import { AppError, badRequest, forbidden, notFound } from "../utils/AppError.js";
 import { roundMoney, toNumber } from "../utils/money.js";
 import { ALLOWED_TRANSITIONS, ORDER_STATUS, ROLES } from "../utils/constants.js";
+import { endOfDayInAppTz, startOfDayInAppTz } from "../utils/date.js";
 
 const orderInclude = {
   items: {
@@ -18,6 +19,12 @@ const orderInclude = {
     },
   },
   shippingMethod: true,
+};
+
+/** Đơn cho admin: kèm danh tính khách để hiển thị/đối soát trong trang quản trị. */
+const adminOrderInclude = {
+  ...orderInclude,
+  user: { select: { id: true, username: true, email: true } },
 };
 
 /**
@@ -194,8 +201,9 @@ export const getAllOrders = async ({ page, limit, status, userId, from, to }) =>
   if (userId) where.userId = userId;
   if (from || to) {
     where.createdAt = {};
-    if (from) where.createdAt.gte = new Date(from);
-    if (to) where.createdAt.lte = new Date(to);
+    // `from`/`to` là ngày theo APP_TIME_ZONE, không phải nửa đêm UTC.
+    if (from) where.createdAt.gte = startOfDayInAppTz(from);
+    if (to) where.createdAt.lte = endOfDayInAppTz(to);
   }
 
   const [items, total] = await prisma.$transaction([
@@ -204,7 +212,7 @@ export const getAllOrders = async ({ page, limit, status, userId, from, to }) =>
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
-      include: orderInclude,
+      include: adminOrderInclude,
     }),
     prisma.order.count({ where }),
   ]);
@@ -213,6 +221,16 @@ export const getAllOrders = async ({ page, limit, status, userId, from, to }) =>
     items,
     pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
   };
+};
+
+/** Chi tiết một đơn bất kỳ cho admin (không giới hạn theo chủ sở hữu). */
+export const getOrderDetail = async (orderId) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: adminOrderInclude,
+  });
+  if (!order) throw notFound("Không tồn tại đơn hàng!");
+  return order;
 };
 
 export const updateStatusByAdmin = async (orderId, nextStatus, actor) => {
@@ -238,6 +256,6 @@ export const updatePaymentStatusByAdmin = async (orderId, paymentStatus) => {
     }
 
     console.log(`[PAYMENT] #${orderId}: ${order.paymentStatus} -> ${paymentStatus}`);
-    return tx.order.findUnique({ where: { id: orderId }, include: orderInclude });
+    return tx.order.findUnique({ where: { id: orderId }, include: adminOrderInclude });
   });
 };

@@ -7,9 +7,9 @@ import {
   brandIdParamSchema,
 } from "../validators/brand.validator.js";
 
-export const getAll = async (_req, res) => {
+export const getAll = async (req, res) => {
   try {
-    const data = await brandService.getAll();
+    const data = await brandService.getAll(req.query);
     return sendSuccess(res, data, "Lấy danh sách thương hiệu thành công!");
   } catch (error) {
     return sendAppError(res, error, "Lấy danh sách thương hiệu thất bại!");
