@@ -130,7 +130,7 @@ class SmartSearchEngine:
 
     def search_in_db(self, query: str, limit: int = 20) -> dict[str, Any]:
         """Xử lý truy vấn NLP và trực tiếp truy vấn Database PostgreSQL Supabase."""
-        from ml_service.db.repository import build_smart_search_sql, execute_smart_search_db
+        from src.db.repository import build_smart_search_sql, execute_smart_search_db
 
         analysis = self.process_query(query)
 

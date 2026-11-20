@@ -69,7 +69,7 @@ class PersonalizedRecommender:
 
     def fit_from_db(self) -> "PersonalizedRecommender":
         """Nạp dữ liệu sản phẩm và lịch sử tương tác trực tiếp từ PostgreSQL Supabase."""
-        from ml_service.db.repository import fetch_master_products_df, fetch_user_interactions
+        from src.db.repository import fetch_master_products_df, fetch_user_interactions
 
         products_df = fetch_master_products_df()
         interactions_df = fetch_user_interactions()

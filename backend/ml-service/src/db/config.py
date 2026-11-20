@@ -17,8 +17,8 @@ import psycopg2
 from psycopg2.extensions import connection as PgConnection
 from psycopg2.extensions import cursor as PgCursor
 
-# Import để ml_service.config nạp file .env trước khi đọc DATABASE_URL.
-from ml_service.config import ROOT_DIR  # noqa: F401
+# Import để src.config nạp file .env trước khi đọc DATABASE_URL.
+from src.config import ROOT_DIR  # noqa: F401
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 

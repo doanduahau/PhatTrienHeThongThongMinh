@@ -6,7 +6,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ml_service.schemas import FeaturedItem, FeaturedResponse
+from src.schemas import FeaturedItem, FeaturedResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ranking", tags=["ranking"])
@@ -18,8 +18,8 @@ def featured_products(
     limit: int = Query(default=10, ge=1, le=50),
 ) -> FeaturedResponse:
     try:
-        from ml_service.algorithms.rating_baseline.ranking import FeaturedProductsRanker
-        from ml_service.db.repository import fetch_featured_products_df
+        from src.algorithms.rating_baseline.ranking import FeaturedProductsRanker
+        from src.db.repository import fetch_featured_products_df
 
         products_df = fetch_featured_products_df(category_id=category_id)
         # Sold boost tắt vì toàn catalog mới có 1 lượt bán trong order_items:

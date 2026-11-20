@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ml_service.config import settings
-from ml_service.model_store import store
-from ml_service.schemas import HealthResponse, ModelInfoResponse
+from src.config import settings
+from src.model_store import store
+from src.schemas import HealthResponse, ModelInfoResponse
 
 router = APIRouter(tags=["health"])
 

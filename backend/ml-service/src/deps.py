@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import Header, HTTPException
 
-from ml_service.config import settings
+from src.config import settings
 
 
 def require_internal_token(x_internal_token: str | None = Header(default=None)) -> None:

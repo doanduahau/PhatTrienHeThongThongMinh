@@ -76,7 +76,7 @@ class SimilarProductsRecommender:
 
     def fit_from_db(self) -> "SimilarProductsRecommender":
         """Nạp dữ liệu 405 sản phẩm trực tiếp từ PostgreSQL Supabase và huấn luyện ma trận Cosine."""
-        from ml_service.db.repository import fetch_master_products_df
+        from src.db.repository import fetch_master_products_df
 
         df = fetch_master_products_df()
         return self.fit(df)

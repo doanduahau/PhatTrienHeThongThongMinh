@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
-from ml_service.algorithms.fp_growth.model import FPGrowthRecommender
+from src.algorithms.fp_growth.model import FPGrowthRecommender
 
 
 def format_vnd(amount: float) -> str:
@@ -55,7 +55,7 @@ def load_product_catalog() -> dict[str, dict[str, Any]]:
         8: "Phụ kiện Setup",
         9: "Lót chuột",
     }
-    seed_dir = ROOT_DIR / "ml_service" / "db" / "seed"
+    seed_dir = ROOT_DIR / "src" / "db" / "seed"
     brand_id_map: dict[int, str] = {}
     cat_seed_file = seed_dir / "01_categories.sql"
     if cat_seed_file.exists():

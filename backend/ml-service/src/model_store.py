@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from ml_service.config import MODELS_DIR, ROOT_DIR
+from src.config import MODELS_DIR, ROOT_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -33,25 +33,25 @@ class ModelSpec:
 
 
 def _load_similar(path: Path) -> Any:
-    from ml_service.algorithms.cosine.model import SimilarProductsRecommender
+    from src.algorithms.cosine.model import SimilarProductsRecommender
 
     return SimilarProductsRecommender.load(path)
 
 
 def _load_bundles(path: Path) -> Any:
-    from ml_service.algorithms.fp_growth.model import FPGrowthRecommender
+    from src.algorithms.fp_growth.model import FPGrowthRecommender
 
     return FPGrowthRecommender.load(path)
 
 
 def _load_personalized(path: Path) -> Any:
-    from ml_service.algorithms.cosine_kmeans.model import PersonalizedRecommender
+    from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
 
     return PersonalizedRecommender.load(path)
 
 
 def _load_search(path: Path) -> Any:
-    from ml_service.algorithms.svm_regex.search_engine import SmartSearchEngine
+    from src.algorithms.svm_regex.search_engine import SmartSearchEngine
 
     return SmartSearchEngine(path)
 

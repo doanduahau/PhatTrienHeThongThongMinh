@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from ml_service.main import app
+from src.main import app
 
 
 def test_health() -> None:

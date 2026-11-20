@@ -27,7 +27,7 @@ class FPGrowthRecommender:
 
     def fit_from_db(self) -> "FPGrowthRecommender":
         """Nạp dữ liệu đơn hàng và giỏ hàng trực tiếp từ PostgreSQL Supabase để khai phá luật mua kèm."""
-        from ml_service.db.repository import fetch_order_transactions
+        from src.db.repository import fetch_order_transactions
 
         transactions = fetch_order_transactions()
         if not transactions:

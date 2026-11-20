@@ -1,11 +1,11 @@
 """Script tổng hợp kiểm thử trực quan toàn bộ hệ thống AI & Recommender System.
 
 Import và tái sử dụng các hàm test trực quan từ từng thư mục thuật toán:
-- ml_service/algorithms/cosine/demo.py           (Sản phẩm tương tự - Cosine Similarity)
-- ml_service/algorithms/fp_growth/demo.py        (Gợi ý mua kèm - FP-Growth)
-- ml_service/algorithms/cosine_kmeans/demo.py    (Gợi ý cá nhân hóa - Cosine + K-Means)
-- ml_service/algorithms/svm_regex/demo.py        (Tìm kiếm thông minh - SVM + Regex)
-- ml_service/algorithms/rating_baseline/demo.py  (Sản phẩm nổi bật - Rating Baseline)
+- src/algorithms/cosine/demo.py           (Sản phẩm tương tự - Cosine Similarity)
+- src/algorithms/fp_growth/demo.py        (Gợi ý mua kèm - FP-Growth)
+- src/algorithms/cosine_kmeans/demo.py    (Gợi ý cá nhân hóa - Cosine + K-Means)
+- src/algorithms/svm_regex/demo.py        (Tìm kiếm thông minh - SVM + Regex)
+- src/algorithms/rating_baseline/demo.py  (Sản phẩm nổi bật - Rating Baseline)
 
 Sử dụng (chạy từ thư mục ``backend/ml-service``):
     # 1. Chạy tự động toàn bộ 5 khối nghiệp vụ (kèm thêm mô phỏng hành trình khách hàng):
@@ -38,11 +38,11 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
 # Import từ các file demo riêng biệt của từng thuật toán
-from ml_service.algorithms.cosine.demo import run_interactive_cosine, test_cosine
-from ml_service.algorithms.fp_growth.demo import run_interactive_fpgrowth, test_fpgrowth
-from ml_service.algorithms.cosine_kmeans.demo import run_interactive_kmeans, test_kmeans
-from ml_service.algorithms.svm_regex.demo import run_interactive_search, test_smart_search
-from ml_service.algorithms.rating_baseline.demo import run_interactive_featured, test_featured, test_featured_visual
+from src.algorithms.cosine.demo import run_interactive_cosine, test_cosine
+from src.algorithms.fp_growth.demo import run_interactive_fpgrowth, test_fpgrowth
+from src.algorithms.cosine_kmeans.demo import run_interactive_kmeans, test_kmeans
+from src.algorithms.svm_regex.demo import run_interactive_search, test_smart_search
+from src.algorithms.rating_baseline.demo import run_interactive_featured, test_featured, test_featured_visual
 
 
 def run_customer_journey_simulation(

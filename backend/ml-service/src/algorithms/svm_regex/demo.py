@@ -28,9 +28,9 @@ warnings.filterwarnings("ignore")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
-from ml_service.algorithms.svm_regex.search_engine import SmartSearchEngine
-from ml_service.algorithms.cosine_kmeans.model import PersonalizedRecommender
-from ml_service.algorithms.cosine.model import SimilarProductsRecommender
+from src.algorithms.svm_regex.search_engine import SmartSearchEngine
+from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
+from src.algorithms.cosine.model import SimilarProductsRecommender
 
 
 def format_vnd(amount: float) -> str:
@@ -141,7 +141,7 @@ def test_smart_search_visual(
 
     # In câu SQL Query thực tế được sinh ra để kiểm tra
     if should_query:
-        from ml_service.db.repository import build_smart_search_sql
+        from src.db.repository import build_smart_search_sql
         _, _, readable_sql = build_smart_search_sql(hard_rules, soft_tags, raw_query=query, limit=top_products)
         print("   • Câu lệnh SQL Query sinh ra để truy vấn DB:")
         print("     ┌" + "─" * 68)

@@ -2,7 +2,7 @@
 
 Chạy từ thư mục ``backend/ml-service``::
 
-    .\\venv\\Scripts\\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000 --reload
+    .\\venv\\Scripts\\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
 
 Service chỉ nên bind 127.0.0.1 và được gọi nội bộ từ backend.
 """
@@ -14,9 +14,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from ml_service.config import settings
-from ml_service.model_store import store
-from ml_service.routers import admin, health, ranking, recommend, search
+from src.config import settings
+from src.model_store import store
+from src.routers import admin, health, ranking, recommend, search
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,4 +51,4 @@ app.include_router(admin.router)
 if __name__ == "__main__":  # pragma: no cover
     import uvicorn
 
-    uvicorn.run("ml_service.main:app", host=settings.host, port=settings.port, reload=True)
+    uvicorn.run("src.main:app", host=settings.host, port=settings.port, reload=True)

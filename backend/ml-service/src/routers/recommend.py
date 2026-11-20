@@ -6,8 +6,8 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from ml_service.model_store import ModelNotReady, store
-from ml_service.schemas import (
+from src.model_store import ModelNotReady, store
+from src.schemas import (
     BundleRequest,
     PersonalizedRequest,
     RecommendResponse,

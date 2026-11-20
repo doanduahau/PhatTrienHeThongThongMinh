@@ -5,12 +5,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Đảm bảo import được package ml_service khi chạy trực tiếp
+# Đảm bảo import được package src khi chạy trực tiếp
 ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ml_service.db.config import get_connection
+from src.db.config import get_connection
 
 SEED_DIR = Path(__file__).resolve().parent
 SCHEMA_FILE = SEED_DIR.parent / "schema.sql"

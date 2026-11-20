@@ -29,8 +29,8 @@ warnings.filterwarnings("ignore")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
-from ml_service.algorithms.cosine.model import SimilarProductsRecommender
-from ml_service.algorithms.rating_baseline.ranking import FeaturedProductsRanker
+from src.algorithms.cosine.model import SimilarProductsRecommender
+from src.algorithms.rating_baseline.ranking import FeaturedProductsRanker
 
 
 def format_vnd(amount: float) -> str:

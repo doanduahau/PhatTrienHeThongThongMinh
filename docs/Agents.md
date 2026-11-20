@@ -76,7 +76,7 @@ backend/
     server.js                    app.listen
 
   ml-service/                    ML service (Python, venv)
-    ml_service/
+    src/
       __init__.py
       main.py                    FastAPI entrypoint, lifespan preload model
       config.py                  Settings từ .env + ROOT_DIR/DATA_DIR/MODELS_DIR
@@ -141,7 +141,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env      # sửa DATABASE_URL read-only
-.\venv\Scripts\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000
 ```
 
 > Service **chỉ bind `127.0.0.1`**. Không mở ra Internet; business service gọi nội bộ.
@@ -398,10 +398,10 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/admin/reload" `
 
 Thêm model mới:
 
-1. Tạo class + `save/load` trong thư mục `ml_service/algorithms/<thuat_toan>/`.
-2. Thêm `ModelSpec` vào `ml_service/model_store.py`, trỏ path vào `models/`.
-3. Thêm schema/response vào `ml_service/schemas.py`, router tương ứng trong `ml_service/routers/`.
-4. Đăng ký router trong `ml_service/main.py`.
+1. Tạo class + `save/load` trong thư mục `src/algorithms/<thuat_toan>/`.
+2. Thêm `ModelSpec` vào `src/model_store.py`, trỏ path vào `models/`.
+3. Thêm schema/response vào `src/schemas.py`, router tương ứng trong `src/routers/`.
+4. Đăng ký router trong `src/main.py`.
 5. Gọi `_write_manifest(save_path, metrics)` trong `scripts\train.py`.
 6. Thêm test vào `backend/ml-service/tests/test_api.py`.
 
@@ -449,8 +449,8 @@ bằng công cụ khác. Trong thời gian đó, kiểm tra API thủ công bằ
 - Không đọc `.joblib` theo từng request; luôn qua `store.get(key)`.
 - Không ghi DB. `db/config.py` mặc định `commit=False`.
 - Log lỗi bằng `logger.exception`, trả `HTTPException` có mã phù hợp.
-- Không import `ml_service.*` từ trong các package thuật toán (`ml_service/algorithms/*`) để giữ chúng độc lập, testable.
-- Chạy service: `.\venv\Scripts\python.exe -m uvicorn ml_service.main:app` từ thư mục `backend/ml-service`.
+- Không import `src.*` từ trong các package thuật toán (`src/algorithms/*`) để giữ chúng độc lập, testable.
+- Chạy service: `.\venv\Scripts\python.exe -m uvicorn src.main:app` từ thư mục `backend/ml-service`.
 
 ---
 

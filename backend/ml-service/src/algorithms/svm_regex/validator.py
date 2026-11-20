@@ -8,12 +8,12 @@ Chức năng chính:
 - Cảnh báo intent chưa đạt `target_samples_count` trong metadata.
 
 Có thể dùng như module:
-    from ml_service.algorithms.svm_regex.validator import validate_dataset
+    from src.algorithms.svm_regex.validator import validate_dataset
     report = validate_dataset("data/intents.csv")
     print(report["valid"], report["intent_counts"])
 
 Hoặc chạy trực tiếp:
-    python -m ml_service.algorithms.svm_regex.validator data/intents.csv
+    python -m src.algorithms.svm_regex.validator data/intents.csv
 """
 
 from __future__ import annotations

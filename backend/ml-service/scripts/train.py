@@ -31,7 +31,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT_DIR / "data"
 MODELS_DIR = ROOT_DIR / "models"
 
-# Cho phép import package ml_service khi chạy script trực tiếp.
+# Cho phép import package src khi chạy script trực tiếp.
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -55,7 +55,7 @@ def train_cosine(source: str = "csv") -> None:
     print("\n" + "=" * 60)
     print("▶ [1/4] HUẤN LUYỆN: Cosine Similarity (Sản phẩm tương tự)")
     print("=" * 60)
-    from ml_service.algorithms.cosine.model import SimilarProductsRecommender
+    from src.algorithms.cosine.model import SimilarProductsRecommender
 
     recommender = SimilarProductsRecommender()
     if source == "db":
@@ -87,7 +87,7 @@ def train_fp_growth(source: str = "csv") -> None:
     print("\n" + "=" * 60)
     print("▶ [2/4] HUẤN LUYỆN: FP-Growth (Thường mua kèm)")
     print("=" * 60)
-    from ml_service.algorithms.fp_growth.model import FPGrowthRecommender
+    from src.algorithms.fp_growth.model import FPGrowthRecommender
 
     recommender = FPGrowthRecommender(min_support=0.01, min_confidence=0.1, min_lift=1.0)
     if source == "db":
@@ -127,12 +127,12 @@ def train_kmeans(source: str = "csv") -> None:
     print("\n" + "=" * 60)
     print("▶ [3/4] HUẤN LUYỆN: Cosine + K-Means (Gợi ý cho bạn)")
     print("=" * 60)
-    from ml_service.algorithms.cosine_kmeans.model import PersonalizedRecommender
+    from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
 
     recommender = PersonalizedRecommender(n_clusters=3, random_state=42)
     if source == "db":
         print("  - Nạp dữ liệu sản phẩm & tương tác từ PostgreSQL Supabase...")
-        from ml_service.db.repository import fetch_master_products_df, fetch_user_interactions
+        from src.db.repository import fetch_master_products_df, fetch_user_interactions
 
         products_df = fetch_master_products_df()
         inter_df = fetch_user_interactions()
@@ -177,7 +177,7 @@ def train_svm(source: str = "csv") -> None:
     print("\n" + "=" * 60)
     print("▶ [4/4] HUẤN LUYỆN: LinearSVC + TF-IDF (Tìm kiếm thông minh)")
     print("=" * 60)
-    from ml_service.algorithms.svm_regex.intent_classifier import IntentClassifier
+    from src.algorithms.svm_regex.intent_classifier import IntentClassifier
 
     csv_path = DATA_DIR / "svm_regex.csv"
     print(f"  - Đọc tập dữ liệu intent từ file: {csv_path}...")

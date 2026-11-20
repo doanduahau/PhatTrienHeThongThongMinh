@@ -7,8 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from ml_service.model_store import ModelNotReady, store
-from ml_service.schemas import SearchParseRequest
+from src.model_store import ModelNotReady, store
+from src.schemas import SearchParseRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])

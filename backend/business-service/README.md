@@ -265,7 +265,7 @@ Chạy ML service (chi tiết ở `../ml-service/README.md`):
 
 ```powershell
 cd ../ml-service
-.\venv\Scripts\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000
 ```
 
 ML chỉ trả `product_id` + điểm số. Backend hydrate giá/tồn kho/ảnh từ DB nên dữ liệu

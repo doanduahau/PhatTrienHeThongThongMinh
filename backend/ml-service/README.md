@@ -10,7 +10,7 @@ ML service dùng FastAPI, chỉ đọc PostgreSQL và **chỉ trả `product_id`
 
 ```text
 backend/ml-service/
-├── ml_service/                   # Package ML service (chạy: uvicorn ml_service.main:app)
+├── src/                   # Package ML service (chạy: uvicorn src.main:app)
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI app, lifespan preload model
 │   ├── config.py                 # Settings từ .env + ROOT_DIR/DATA_DIR/MODELS_DIR
@@ -48,16 +48,16 @@ backend/ml-service/
 └── requirements.txt              # Thư viện Python (fastapi, uvicorn, psycopg2, sklearn, ...)
 ```
 
-Thư mục thuật toán (`algorithms/*`) được giữ độc lập, không import `ml_service.*` để có thể train/test riêng lẻ.
+Thư mục thuật toán (`algorithms/*`) được giữ độc lập, không import `src.*` để có thể train/test riêng lẻ.
 
 ---
 
-## 2. Quản lý Cơ sở dữ liệu (`ml_service/db/`)
+## 2. Quản lý Cơ sở dữ liệu (`src/db/`)
 
-* [`ml_service/db/config.py`](./ml_service/db/config.py): Kết nối PostgreSQL, đọc `DATABASE_URL` từ `.env`. Mặc định `get_cursor(commit=False)` vì service **chỉ đọc**.
-* [`ml_service/db/schema.sql`](./ml_service/db/schema.sql): Tài liệu tham khảo DDL. **Prisma trong `backend/` là nguồn schema chính** — không chạy file này đè lên DB đang dùng.
-* [`ml_service/db/seed/`](./ml_service/db/seed): SQL seed dữ liệu mẫu.
-* [`ml_service/db/seed/seed_runner.py`](./ml_service/db/seed/seed_runner.py): Script chạy seed (chỉ dùng khi cần).
+* [`src/db/config.py`](./src/db/config.py): Kết nối PostgreSQL, đọc `DATABASE_URL` từ `.env`. Mặc định `get_cursor(commit=False)` vì service **chỉ đọc**.
+* [`src/db/schema.sql`](./src/db/schema.sql): Tài liệu tham khảo DDL. **Prisma trong `backend/` là nguồn schema chính** — không chạy file này đè lên DB đang dùng.
+* [`src/db/seed/`](./src/db/seed): SQL seed dữ liệu mẫu.
+* [`src/db/seed/seed_runner.py`](./src/db/seed/seed_runner.py): Script chạy seed (chỉ dùng khi cần).
 
 ### Tài khoản read-only
 
@@ -107,7 +107,7 @@ Không cần Docker cho service Python. Chạy trực tiếp bằng `venv`.
 
 ```powershell
 cd backend/ml-service
-.\venv\Scripts\python.exe -m uvicorn ml_service.main:app --host 127.0.0.1 --port 8000 --reload
+.\venv\Scripts\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Lần khởi động đầu tiên sẽ nạp 4 model `.joblib` vào bộ nhớ (xem log). Service **chỉ bind `127.0.0.1`** và được backend gọi nội bộ.
@@ -195,19 +195,19 @@ Bộ test hiện có 6 case: health, ready đủ model, similar, parse trong ph�
 
 ```powershell
 # 1. Cosine Similarity (Sản phẩm tương tự)
-.\venv\Scripts\python.exe ml_service\algorithms\cosine\demo.py --id 1 --top 4
+.\venv\Scripts\python.exe src\algorithms\cosine\demo.py --id 1 --top 4
 
 # 2. FP-Growth (Gợi ý mua kèm)
-.\venv\Scripts\python.exe ml_service\algorithms\fp_growth\demo.py --ids 1 15 --top 4
+.\venv\Scripts\python.exe src\algorithms\fp_growth\demo.py --ids 1 15 --top 4
 
 # 3. Cosine + K-Means (Gợi ý cá nhân hóa cho User)
-.\venv\Scripts\python.exe ml_service\algorithms\cosine_kmeans\demo.py --user 1 --top 4
+.\venv\Scripts\python.exe src\algorithms\cosine_kmeans\demo.py --user 1 --top 4
 
 # 4. SVM + Regex (Tìm kiếm thông minh)
-.\venv\Scripts\python.exe ml_service\algorithms\svm_regex\demo.py --query "chuột gaming không dây siêu nhẹ claw grip dưới 2 triệu"
+.\venv\Scripts\python.exe src\algorithms\svm_regex\demo.py --query "chuột gaming không dây siêu nhẹ claw grip dưới 2 triệu"
 
 # 5. Rating Baseline (Xếp hạng sản phẩm nổi bật)
-.\venv\Scripts\python.exe ml_service\algorithms\rating_baseline\demo.py --top 5
+.\venv\Scripts\python.exe src\algorithms\rating_baseline\demo.py --top 5
 ```
 
 ### C. Kiểm thử tổng hợp (`scripts/demo.py`)
@@ -222,8 +222,8 @@ Bộ test hiện có 6 case: health, ready đủ model, similar, parse trong ph�
 
 ## 7. Quy ước khi mở rộng service
 
-- Không đọc `.joblib` theo từng request — luôn dùng `store.get(key)` trong `ml_service/model_store.py`.
-- Thêm model mới: tạo class `save/load`, thêm `ModelSpec`, thêm router/schema, đăng ký trong `ml_service/main.py`, ghi manifest trong `scripts/train.py`, thêm test.
+- Không đọc `.joblib` theo từng request — luôn dùng `store.get(key)` trong `src/model_store.py`.
+- Thêm model mới: tạo class `save/load`, thêm `ModelSpec`, thêm router/schema, đăng ký trong `src/main.py`, ghi manifest trong `scripts/train.py`, thêm test.
 - Router chỉ nên mỏng: Pydantic validate → gọi model → map response.
 - Không ghi DB. Không trả giá/tồn kho/ảnh từ ML.
-- Không import `ml_service.*` từ các package thuật toán để giữ chúng độc lập và testable.
+- Không import `src.*` từ các package thuật toán để giữ chúng độc lập và testable.

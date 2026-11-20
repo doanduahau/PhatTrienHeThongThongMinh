@@ -32,8 +32,8 @@ warnings.filterwarnings("ignore")
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
-from ml_service.algorithms.cosine_kmeans.model import PersonalizedRecommender
-from ml_service.algorithms.fp_growth.demo import load_product_catalog
+from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
+from src.algorithms.fp_growth.demo import load_product_catalog
 
 CLUSTER_PERSONAS = {
     0: "Gamer eSports / Hiệu năng cao (Ưu tiên chuột siêu nhẹ, Polling rate cao, FPS/MOBA)",
