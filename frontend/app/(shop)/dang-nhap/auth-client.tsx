@@ -123,10 +123,6 @@ function AuthForms() {
                 <label htmlFor="reg-password" className={label}>Mật khẩu</label>
                 <input id="reg-password" name="password" type="password" autoComplete="new-password" required className={field} />
               </div>
-              <div>
-                <label htmlFor="reg-address" className={label}>Địa chỉ (không bắt buộc)</label>
-                <input id="reg-address" name="address" type="text" autoComplete="street-address" className={field} />
-              </div>
               <Button type="submit" size="lg" disabled={busy} className="w-full">
                 {busy ? "Đang tạo..." : "Tạo tài khoản"}
               </Button>
@@ -153,9 +149,6 @@ function AuthForms() {
           <p className="mt-4 text-xs text-muted lg:hidden">
             Tài khoản demo: <strong>khachhang1</strong> / <strong>123456</strong>.
           </p>
-          <Link href="/san-pham" className="mt-4 inline-block text-sm text-muted hover:text-accent">
-            Tiếp tục xem sản phẩm
-          </Link>
         </div>
       </div>
     </Container>
