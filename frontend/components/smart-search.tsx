@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Container } from "./ui";
-import { resolveImage } from "@/lib/format";
 
 const SUGGESTIONS = [
   "chuột không dây dưới 2 triệu",
@@ -13,45 +13,27 @@ const SUGGESTIONS = [
   "ghế công thái học lưng lưới",
 ];
 
-export type SearchSlideItem = {
-  image?: string | null;
-  name?: string;
+type SearchSlideItem = {
+  image: string;
+  name: string;
+  href: string;
 };
 
-export function SmartSearchBand({
-  items,
-  image,
-  imageAlt,
-}: {
-  items?: SearchSlideItem[];
-  image?: string | null;
-  imageAlt?: string;
-}) {
+export function SmartSearchBand({ items, title }: { items: SearchSlideItem[]; title: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Chuẩn bị danh sách ảnh hợp lệ
-  const slides = (
-    items && items.length > 0
-      ? items
-      : [{ image, name: imageAlt }]
-  )
-    .map((item) => ({
-      src: resolveImage(item.image),
-      alt: item.name ?? "Gear Shop",
-    }))
-    .filter((item): item is { src: string; alt: string } => Boolean(item.src));
-
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const activeSlide = items[currentIndex] ?? items[0];
 
-  // Chuyển ảnh liên tục sau mỗi 3 giây
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (items.length <= 1 || hovered || focused) return;
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % slides.length);
+      setCurrentIndex((prev) => (prev + 1) % items.length);
     }, 3000);
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, [items.length, hovered, focused]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,47 +43,55 @@ export function SmartSearchBand({
     router.push(`/san-pham?q=${encodeURIComponent(query)}&smart=1`);
   };
 
-  const hasSlides = slides.length > 0;
-
   return (
     <section id="tim-kiem" aria-labelledby="tim-kiem-heading" className="bg-ink py-12 text-bg lg:py-16">
       <Container
-        className={`grid items-center gap-8 md:gap-12 ${hasSlides ? "md:grid-cols-2" : ""}`}
+        className={`grid items-center gap-8 md:gap-12 ${activeSlide ? "md:grid-cols-2" : ""}`}
       >
-        {hasSlides ? (
+        {activeSlide ? (
           <div className="flex items-center justify-center md:order-last">
-            {/* Khung ảnh: Trên desktop tối đa 650px vuông 1:1, trên mobile/tablet hạ chiều cao tối đa gọn gàng aspect-[4/3] hoặc max-h-[360px] */}
-            <div className="relative aspect-[4/3] sm:aspect-square w-full max-w-[340px] sm:max-w-[460px] md:max-w-[650px] max-h-[300px] sm:max-h-[460px] md:max-h-[650px] overflow-hidden rounded-card bg-subtle/10 shadow-lg">
-              {slides.map((slide, idx) => (
-                <div
-                  key={`${slide.src}-${idx}`}
-                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                    idx === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            <div
+              className="relative aspect-[4/3] w-full max-w-[340px] overflow-hidden rounded-card bg-bg shadow-lg sm:aspect-square sm:max-w-[460px] md:max-w-[650px]"
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
+              onFocus={() => setFocused(true)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+              }}
+            >
+              {items.map((slide, index) => (
+                <Image
+                  key={slide.href}
+                  src={slide.image}
+                  alt=""
+                  fill
+                  preload={index === 0}
+                  sizes="(min-width: 1024px) 650px, (min-width: 640px) 460px, 340px"
+                  unoptimized={slide.image.startsWith("http:")}
+                  className={`object-contain transition-opacity duration-700 ease-in-out motion-reduce:transition-none ${
+                    slide === activeSlide ? "opacity-100" : "opacity-0"
                   }`}
-                >
-                  <Image
-                    src={slide.src}
-                    alt={slide.alt}
-                    width={650}
-                    height={650}
-                    priority={idx === 0}
-                    sizes="(min-width: 1024px) 650px, (min-width: 640px) 460px, 340px"
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
+                />
               ))}
+              <Link
+                href={activeSlide.href}
+                className="group absolute inset-0 z-10 flex flex-col justify-end gap-1 bg-linear-to-t from-black/85 via-black/40 via-25% to-transparent to-50% px-4 pb-12 pt-4 text-white focus-visible:-outline-offset-4"
+              >
+                <span className="text-xs font-medium">{title}</span>
+                <span className="font-semibold group-hover:underline">{activeSlide.name}</span>
+              </Link>
 
-              {/* Chấm chỉ số slide nếu có nhiều hơn 1 ảnh */}
-              {slides.length > 1 ? (
-                <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/40 px-2.5 py-1 backdrop-blur-sm">
-                  {slides.map((_, idx) => (
+              {items.length > 1 ? (
+                <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/50 px-2.5 py-1 backdrop-blur-sm">
+                  {items.map((slide, index) => (
                     <button
-                      key={idx}
+                      key={slide.href}
                       type="button"
-                      aria-label={`Slide ${idx + 1}`}
-                      onClick={() => setCurrentIndex(idx)}
+                      aria-label={`Xem ${slide.name}`}
+                      aria-current={slide === activeSlide}
+                      onClick={() => setCurrentIndex(index)}
                       className={`h-2 rounded-full transition-all ${
-                        idx === currentIndex
+                        slide === activeSlide
                           ? "w-5 bg-white"
                           : "w-2 bg-white/50 hover:bg-white/75"
                       }`}

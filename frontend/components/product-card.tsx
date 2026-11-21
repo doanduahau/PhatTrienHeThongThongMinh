@@ -49,7 +49,7 @@ export function ProductCard({ product }: { product: Product }) {
           <div className="flex items-center justify-between gap-2">
             <ColorDot color={product.color} />
             <span className={`text-xs ${out ? "text-danger" : "text-muted"}`}>
-              {out ? "Tạm hết" : "Sẵn hàng"}
+              {out ? "Hết hàng" : "Còn hàng"}
             </span>
           </div>
         </div>

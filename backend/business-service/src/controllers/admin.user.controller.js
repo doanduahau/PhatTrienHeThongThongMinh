@@ -6,6 +6,8 @@ import {
   userIdParamSchema,
   setUserLockSchema,
   setUserRoleSchema,
+  createAdminUserSchema,
+  adminResetPasswordSchema,
 } from "../validators/admin.user.validator.js";
 
 export const getUsers = async (req, res) => {
@@ -57,5 +59,52 @@ export const setRole = async (req, res) => {
     return sendSuccess(res, data, "Đổi role thành công!");
   } catch (error) {
     return sendAppError(res, error, "Đổi role thất bại!");
+  }
+};
+
+export const createUser = async (req, res) => {
+  const validation = validateInput(createAdminUserSchema, req.body);
+  if (!validation.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", validation.errors, 400);
+  }
+
+  try {
+    const data = await adminUserService.createUser(validation.data);
+    return sendSuccess(res, data, "Tạo người dùng thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Tạo người dùng thất bại!");
+  }
+};
+
+export const removeUser = async (req, res) => {
+  const params = validateInput(userIdParamSchema, req.params);
+  if (!params.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", params.errors, 400);
+  }
+
+  try {
+    const data = await adminUserService.removeUser(params.data.id, req.user.id);
+    return sendSuccess(res, data, "Xoá người dùng thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Xoá người dùng thất bại!");
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  const params = validateInput(userIdParamSchema, req.params);
+  if (!params.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", params.errors, 400);
+  }
+
+  const validation = validateInput(adminResetPasswordSchema, req.body);
+  if (!validation.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", validation.errors, 400);
+  }
+
+  try {
+    const data = await adminUserService.resetPassword(params.data.id, validation.data.password);
+    return sendSuccess(res, data, "Đặt lại mật khẩu thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Đặt lại mật khẩu thất bại!");
   }
 };

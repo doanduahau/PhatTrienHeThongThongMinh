@@ -24,6 +24,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -129,6 +130,7 @@ def train_kmeans(source: str = "csv") -> None:
     print("▶ [3/5] HUẤN LUYỆN: Cosine + K-Means (Gợi ý cho bạn)")
     print("=" * 60)
     from src.algorithms.cosine_kmeans.model import PersonalizedRecommender
+    from src.algorithms.cosine_kmeans.product_tags import PREFERENCE_LABELS
 
     recommender = PersonalizedRecommender(n_clusters=3, random_state=42)
     if source == "db":
@@ -153,14 +155,40 @@ def train_kmeans(source: str = "csv") -> None:
         recommender.fit(products_df, inter_df)
 
     save_path = MODELS_DIR / "personalized_model.joblib"
-    recommender.save(save_path)
-    _write_manifest(
-        save_path,
-        {
-            "users": len(recommender.user_profiles),
-            "products": int(len(recommender.products_df)),
-        },
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    tag_column = recommender.products_df["tags"]
+    preferences = recommender.products_df["preference_tags"]
+    counts = preferences.explode().value_counts()
+    coverage = (
+        recommender.products_df.assign(labeled=preferences.map(bool))
+        .groupby("category_key")["labeled"]
+        .agg(["size", "sum"])
     )
+    with TemporaryDirectory(dir=MODELS_DIR) as staging:
+        candidate = Path(staging) / save_path.name
+        recommender.save(candidate)
+        manifest = _write_manifest(
+            candidate,
+            {
+                "users": len(recommender.user_profiles),
+                "products": len(recommender.products_df),
+                "tagged_products": int(tag_column.ne("").sum()),
+                "distinct_product_tags": len({tag for tags in tag_column for tag in tags.split(",") if tag}),
+                "preference_labels": {
+                    code: {"label": label, "products": int(counts.get(code, 0))}
+                    for code, label in PREFERENCE_LABELS.items()
+                },
+                "preference_coverage": {
+                    name.replace("_", "-"): {"products": int(row["size"]), "labeled": int(row["sum"])}
+                    for name, row in coverage.iterrows()
+                },
+                "clusters": len(set(recommender.user_clusters.values())),
+                "data_source": source,
+            },
+        )
+        PersonalizedRecommender.load(candidate)
+        candidate.replace(save_path)
+        manifest.replace(save_path.with_suffix(".manifest.json"))
     print(f"  ✓ Đã tạo {len(recommender.user_profiles)} vector hồ sơ người dùng.")
     print(f"  ✓ Đã phân cụm thành {len(set(recommender.user_clusters.values()))} nhóm sở thích K-Means.")
     print(f"  ✓ Đã lưu mô hình tại: {save_path}")

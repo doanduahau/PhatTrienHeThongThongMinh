@@ -6,6 +6,7 @@ import {
   createReviewSchema,
   reviewQuerySchema,
   adminRemoveReviewParamsSchema,
+  adminReviewsQuerySchema,
 } from "../validators/review.validator.js";
 
 export const createOrUpdate = async (req, res) => {
@@ -40,6 +41,21 @@ export const getReviews = async (req, res) => {
 
   try {
     const data = await reviewService.getReviews(params.data.id, validation.data);
+    return sendSuccess(res, data, "Lấy danh sách nhận xét thành công!");
+  } catch (error) {
+    return sendAppError(res, error, "Lấy danh sách nhận xét thất bại!");
+  }
+};
+
+/** Danh sách nhận xét mọi sản phẩm cho admin. */
+export const getAllReviews = async (req, res) => {
+  const validation = validateInput(adminReviewsQuerySchema, req.query);
+  if (!validation.success) {
+    return sendError(res, "Dữ liệu không hợp lệ!", "400", validation.errors, 400);
+  }
+
+  try {
+    const data = await reviewService.getAllReviews(validation.data);
     return sendSuccess(res, data, "Lấy danh sách nhận xét thành công!");
   } catch (error) {
     return sendAppError(res, error, "Lấy danh sách nhận xét thất bại!");

@@ -127,10 +127,15 @@ Invoke-RestMethod http://localhost:8000/models
 | GET | `/models` | — | Chi tiết model, manifest, lỗi nạp |
 | POST | `/recommend/similar` | `{ product_id, top_n, same_category_only? }` | Sản phẩm tương tự (Cosine) |
 | POST | `/recommend/bundles` | `{ product_ids[], top_n }` | Thường mua kèm (FP-Growth) |
-| POST | `/recommend/personalized` | `{ user_id, top_n }` | Cá nhân hóa (Cosine + K-Means); user lạ trả `cold_start: true` |
+| POST | `/recommend/personalized` | `{ user_id, top_n, category_slugs? }` | Cá nhân hóa (Cosine + K-Means); tài khoản thiếu hồ sơ trả `cold_start: true` |
 | POST | `/search/parse` | `{ query }` | **Chỉ parse**: intent + hard constraints + soft tags, không chạm DB |
 | GET | `/ranking/featured` | `?category_id&limit` | Sản phẩm nổi bật (cần DB) |
-| POST | `/admin/reload` | Header `X-Internal-Token` | Nạp lại toàn bộ model sau khi train |
+| GET | `/admin/models` | Header `X-Internal-Token` | Danh sách model, trạng thái nạp và manifest |
+| POST | `/admin/reload` | Header `X-Internal-Token`, tùy chọn `?key` | Nạp lại một hoặc tất cả model. Bản cũ tiếp tục phục vụ nếu bản mới nạp lỗi |
+| GET | `/admin/datasets` | Header `X-Internal-Token` | Liệt kê CSV trong `data/` và `data/uploads/` |
+| GET | `/admin/datasets/{scope}/{name}` | Header `X-Internal-Token` | Tải CSV thuộc `original` hoặc `uploaded` |
+| PUT | `/admin/datasets/uploaded/{name}` | Header `X-Internal-Token`, body `application/octet-stream` | Lưu CSV UTF-8 tối đa 10 MB, từ chối tên trùng |
+| DELETE | `/admin/datasets/uploaded/{name}` | Header `X-Internal-Token` | Xóa CSV đã tải lên |
 
 Ví dụ:
 
@@ -146,6 +151,12 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8000/search/parse `
 ---
 
 ## 5. Huấn luyện các mô hình AI (`scripts/train.py`)
+
+Trang `/admin/ml` quản lý các tệp CSV đã tải lên trong `data/uploads/`. Các
+thao tác trên tệp yêu cầu cấu hình `ML_INTERNAL_TOKEN` khớp giữa hai service.
+Script huấn luyện đọc các tệp có tên cố định trong `data/`. Để dùng một bản đã
+tải lên, chọn và kiểm tra tệp rồi đặt bản sao vào đúng tên dữ liệu của model trước
+khi chạy script.
 
 File [`scripts/train.py`](./scripts/train.py) là entrypoint chính để huấn luyện và xuất các model `.joblib` vào `models/`:
 
@@ -165,6 +176,14 @@ File [`scripts/train.py`](./scripts/train.py) là entrypoint chính để huấn
 ```
 
 Mỗi lần train, `scripts/train.py` ghi thêm `<ten_model>.manifest.json` (version, thời điểm train, metrics) cạnh file `.joblib` trong `models/`. `/models` và `/ready` đọc manifest này.
+
+### Gợi ý cá nhân hóa
+
+Chạy `scripts/train.py --model kmeans --source db` để dùng danh mục đang bán,
+lịch sử mua hàng, giỏ hàng và đánh giá từ 4 sao. Mỗi sản phẩm có thể mang
+nhiều nhãn sở thích, suy ra từ danh mục, thông số và tên sản phẩm.
+Model dùng các nhãn này cùng đặc trưng văn bản và giá để tính tương đồng.
+Manifest ghi số lượng sản phẩm theo nhãn và độ phủ nhãn theo danh mục.
 
 ### Sản phẩm nổi bật: Decision Tree
 

@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
 import { StoreProvider } from "@/components/store";
-import { HeaderShell } from "@/components/header-shell";
-import { Footer } from "@/components/footer";
 
 const beVietnam = Be_Vietnam_Pro({
   variable: "--font-be-vietnam",
@@ -36,17 +33,7 @@ export default function RootLayout({
           Tới nội dung chính
         </a>
         <StoreProvider>
-          <Suspense
-            fallback={
-              <div className="h-24 bg-bg" aria-hidden="true" />
-            }
-          >
-            <HeaderShell />
-          </Suspense>
-          <main id="main" className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          {children}
         </StoreProvider>
       </body>
     </html>

@@ -7,7 +7,11 @@ import { authenticate, requireAdmin } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.get("/", productController.getAll);
+// Có token admin -> thấy cả sản phẩm đã ngưng bán (làm theo shipping.route.js)
+const optionalAuthenticate = (req, res, next) =>
+  req.headers.authorization ? authenticate(req, res, next) : next();
+
+router.get("/", optionalAuthenticate, productController.getAll);
 // Phải khai báo trước "/:id" để không bị hiểu là id = "search"
 router.get("/search/smart", recommendationController.smartSearch);
 router.get("/:id/similar", recommendationController.getSimilar);
@@ -18,7 +22,7 @@ router.get("/:id/reviews", reviewController.getReviews);
 router.post("/:id/reviews", authenticate, reviewController.createOrUpdate);
 router.delete("/:id/reviews", authenticate, reviewController.removeReview);
 router.delete("/:id/reviews/:reviewId", authenticate, requireAdmin, reviewController.removeReviewByAdmin);
-router.get("/:id", productController.getById);
+router.get("/:id", optionalAuthenticate, productController.getById);
 router.post("/", authenticate, requireAdmin, productController.create);
 router.put("/:id", authenticate, requireAdmin, productController.update);
 router.delete("/:id", authenticate, requireAdmin, productController.remove);

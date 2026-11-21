@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Brand } from "@/lib/types";
 
@@ -337,6 +337,36 @@ export function CategoryFilters({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [maxHeight, setMaxHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    let ticking = false;
+    const updateMaxHeight = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const resultsEl = document.getElementById("product-results-section");
+        if (resultsEl) {
+          const newH = resultsEl.offsetHeight;
+          setMaxHeight((prev) => (prev !== newH ? newH : prev));
+        }
+        ticking = false;
+      });
+    };
+
+    updateMaxHeight();
+    const resultsEl = document.getElementById("product-results-section");
+    if (!resultsEl) return;
+
+    const observer = new ResizeObserver(updateMaxHeight);
+    observer.observe(resultsEl);
+    window.addEventListener("resize", updateMaxHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateMaxHeight);
+    };
+  }, [searchParams]);
 
   const getParam = (key: string) => searchParams.get(key) ?? "";
 
@@ -381,18 +411,38 @@ export function CategoryFilters({
     else localStorage.removeItem(storageKey);
   }, [searchParams, storageKey]);
 
-  // Vào trang với URL sạch (không tham số nào) thì khôi phục bộ lọc cũ.
+  // Vào trang với URL sạch (không có bộ lọc nào) thì khôi phục bộ lọc cũ từ localStorage.
   useEffect(() => {
-    if ([...searchParams.keys()].length > 0) return;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) router.replace(`${basePath}?${saved}`, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const hasAnyFilter = FILTER_KEYS.some((key) => searchParams.has(key));
+    if (hasAnyFilter) return;
+
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        // Giữ lại các param điều hướng hiện tại nếu có (ví dụ sort, q)
+        const currentParams = new URLSearchParams(searchParams.toString());
+        const savedParams = new URLSearchParams(saved);
+        savedParams.forEach((val, key) => {
+          if (!currentParams.has(key)) currentParams.set(key, val);
+        });
+        const targetQs = currentParams.toString();
+        if (targetQs) {
+          router.replace(`${basePath}?${targetQs}`, { scroll: false });
+        }
+      }
+    } catch {
+      // bỏ qua lỗi nếu localStorage bị chặn
+    }
+  }, [basePath, router, searchParams, storageKey]);
 
   return (
-    <aside aria-label="Bộ lọc" className="space-y-1">
+    <aside
+      aria-label="Bộ lọc"
+      className="flex flex-col space-y-1"
+      style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
+    >
       {/* Tiêu đề & Đặt lại */}
-      <div className="flex h-11 items-center justify-between border-b border-line bg-bg pb-4">
+      <div className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-bg pb-4">
         <div className="flex items-center gap-2 font-bold text-base leading-none text-ink">
           <svg
             viewBox="0 0 24 24"
@@ -414,8 +464,8 @@ export function CategoryFilters({
         ) : null}
       </div>
 
-      {/* Phần thân sidebar: trôi theo trang, cuộn riêng khi rê chuột vào (scrollbar ẩn, hiện khi hover) */}
-      <div className="space-y-1 xl:max-h-[calc(100svh-9rem)] xl:overflow-y-auto xl:pe-2 xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden xl:hover:[scrollbar-width:thin] xl:hover:[&::-webkit-scrollbar]:block xl:hover:[&::-webkit-scrollbar]:w-2 xl:hover:[&::-webkit-scrollbar-thumb]:rounded-full xl:hover:[&::-webkit-scrollbar-thumb]:bg-line">
+      {/* Phần thân sidebar: ẩn scrollbar hoàn toàn, có padding phải tránh đè mũi tên */}
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {/* Switch Còn hàng */}
       <div className="flex items-center justify-between border-b border-line py-3">
         <span className="text-sm font-medium text-ink">Còn hàng</span>

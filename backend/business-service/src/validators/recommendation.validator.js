@@ -13,6 +13,13 @@ export const recommendationLimitSchema = z.object({
   limit: limitField(8),
 });
 
+export const forYouQuerySchema = recommendationLimitSchema.extend({
+  slug: z.string().trim().max(500)
+    .regex(/^[a-z0-9-]+(?:,[a-z0-9-]+){0,9}$/, "Danh mục gợi ý không hợp lệ!")
+    .optional()
+    .transform((value) => value ? [...new Set(value.split(","))] : []),
+});
+
 export const cartSuggestionQuerySchema = z.object({
   limit: limitField(6),
 });
