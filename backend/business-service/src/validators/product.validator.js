@@ -54,6 +54,9 @@ const baseProductFields = {
 
 const detailField = { detail: z.any().optional() };
 
+// Giống shipping.validator: chỉ nhận boolean thật, không suy ra từ chuỗi.
+const isActive = z.boolean().optional();
+
 export const createProductSchema = z.object({
   categoryId: baseProductFields.categoryId,
   brandId: baseProductFields.brandId,
@@ -62,6 +65,7 @@ export const createProductSchema = z.object({
   stockQuantity: baseProductFields.stockQuantity,
   imageUrl: baseProductFields.imageUrl,
   price: baseProductFields.price,
+  isActive,
   ...detailField,
 });
 
@@ -73,6 +77,7 @@ export const updateProductSchema = z.object({
   stockQuantity: baseProductFields.stockQuantity,
   imageUrl: baseProductFields.imageUrl.optional(),
   price: baseProductFields.price,
+  isActive,
   ...detailField,
 });
 
@@ -104,6 +109,8 @@ export const productQuerySchema = z.object({
   brand: z.string().trim().min(1).optional(),
   slug: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
+  // "all"/"false" chỉ có tác dụng với token admin (controller chặn khách), xem product.controller.js
+  isActive: z.enum(["all", "true", "false"]).optional(),
   sort: z.enum(["newest", "price_asc", "price_desc", "name_asc", "rating_desc"]).default("newest"),
   inStock: z.union([z.string(), z.boolean()]).optional(),
   minPrice: z.coerce.number().min(0).optional(),

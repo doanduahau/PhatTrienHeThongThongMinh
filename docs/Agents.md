@@ -124,10 +124,14 @@ Copy-Item .env.example .env      # sửa DATABASE_URL, JWT_SECRET
 npx prisma generate
 npx prisma migrate deploy
 npm run seed                     # tạo dữ liệu mẫu + tài khoản demo
-npm run dev                      # http://localhost:3000
+npm run dev                      # http://localhost:5001
 ```
 
-Kiểm tra: `GET http://localhost:3000/api/health`.
+Kiểm tra: `GET http://localhost:5001/api/health`.
+
+> **Cổng**: `.env` đang đặt `PORT=5001` vì macOS giữ 5000 cho ControlCenter/AirPlay Receiver
+> và Next.js dev giữ 3000 (frontend fallback `http://localhost:5001`). `.env.example` vẫn ghi
+> `3000`; đổi máy thì cập nhật cả `NEXT_PUBLIC_API_URL` của frontend.
 
 Tài khoản demo: admin `admin` / `admin123` · khách `khachhang1` / `123456`.
 
@@ -171,7 +175,7 @@ Các model hiện có sẵn:
 
 | Biến | Mặc định | Ý nghĩa |
 | :--- | :--- | :--- |
-| `PORT` | `3000` | Cổng business service |
+| `PORT` | `3000` | Cổng business service (`.env` máy dev đang để `5001`, xem 3.1) |
 | `NODE_ENV` | `development` | `test` sẽ tắt morgan |
 | `DATABASE_URL` | — | **Bắt buộc**, tài khoản có quyền ghi |
 | `JWT_SECRET` | dev-secret | Phải đổi khi deploy |
@@ -271,13 +275,30 @@ Quản trị mở rộng:
 | Method | Path | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
 | GET | `/api/admin/users` | Admin | `?page&limit&search&role&isLocked`, không lộ password/token |
+| POST | `/api/admin/users` | Admin | `{ username, email, password, address?, role?, emailVerified? }` — tạo kèm giỏ hàng trống, **không** gửi mail xác thực (admin tự tick `emailVerified`) |
 | PATCH | `/api/admin/users/:id/lock` · `/:id/role` | Admin | Khoá/mở, đổi role; không cho tự thao tác lên mình |
-| GET | `/api/admin/orders` · `/:id` | Admin | Danh sách (kèm `user: { id, username, email }`, lọc `from`/`to` theo `APP_TIME_ZONE`) và chi tiết một đơn bất kỳ |
+| POST | `/api/admin/users/:id/reset-password` | Admin | `{ password }` — đặt lại không cần mật khẩu cũ, thu hồi token reset đang treo |
+| DELETE | `/api/admin/users/:id` | Admin | Từ chối khi tự xoá mình; từ chối khi còn đơn (`Order.user` là `Cascade` nên xoá là mất lịch sử) → 400 kèm `data.orderCount`, gợi ý khoá tài khoản |
+| GET | `/api/admin/orders` · `/:id` | Admin | Danh sách (kèm `user: { id, username, email }`, lọc `from`/`to` theo `APP_TIME_ZONE`, `search` khớp `code`/username/email/`shippingPhone`) và chi tiết một đơn bất kỳ |
+| GET | `/api/admin/reviews` | Admin | `?page&limit&search&productId&userId&from&to` — mỗi item `{ id, content, createdAt, score, user, product }`; `score` ghép từ bảng ratings theo cặp `(userId, productId)` nên **không lọc được theo score** |
 | POST | `/api/admin/uploads` | Admin | JSON `{ imageUrl }` hoặc multipart `image` ≤ 5MB → `{ url, source, ... }`; nhánh file cần Supabase Storage |
 | GET | `/api/admin/stats/overview` | Admin | User/sản phẩm/đơn theo trạng thái/doanh thu delivered |
 | GET | `/api/admin/stats/revenue` | Admin | `?groupBy=day\|month&from&to` — chỉ đơn delivered |
 | GET | `/api/admin/stats/top-products` | Admin | `?limit` — số lượng bán trong đơn đã giao |
 | GET | `/api/admin/stats/low-stock` | Admin | `?threshold&limit` |
+| POST | `/api/admin/ml/reload` | Admin | Business service gọi tiếp `ML /admin/reload` bằng `X-Internal-Token`; ML chết/lệch token → 503 có thông điệp |
+
+**Mã đơn & trạng thái sản phẩm** (`migration 20261121090000`):
+
+- `orders.code` — `DH-XXXX`, unique, sinh bởi `next_code('"orders_code_seq"', 'DH-')` giống quy ước
+  `DG-`/`NX-`/`VC-`. `orders.id` vẫn là Int vì ML đọc bảng này. Mã có sẵn trong mọi response đơn hàng
+  (checkout, `GET /api/orders`, admin) và là một trong các khoá tìm của `?search=`.
+- `products.is_active` — mặc định `true`. `false` thì ẩn khỏi `GET /api/products`, chi tiết trả 404 với
+  khách, loại khỏi smart search + featured/similar/for-you, và bị filter khỏi dữ liệu train ML
+  (`src/db/repository.py` thêm `WHERE p.is_active`). Admin xem/sửa được bằng token admin
+  (`GET /api/products?isActive=all|false`, `GET /api/products/:id`); POST/PUT products nhận `isActive`.
+  Checkout chặn đặt sản phẩm đã ngưng bán (guest cart có thể còn hàng từ trước).
+  Hai GET products dùng `optionalAuthenticate` (chỉ đọc token nếu có).
 
 Các endpoint ML-related:
 
@@ -393,6 +414,10 @@ cd backend/ml-service
 Invoke-RestMethod -Method Post -Uri "http://localhost:8000/admin/reload" `
   -Headers @{ "X-Internal-Token" = "<token>" }
 ```
+
+Trang quản trị không cầm `X-Internal-Token` (chỉ dùng nội bộ backend), nên reload qua
+`POST /api/admin/ml/reload` — business service attach token rồi gọi ML. ML tắt hoặc token lệch nhau
+trả 503 kèm thông điệp lỗi.
 
 `scripts\train.py` ghi kèm `<ten_model>.manifest.json` (version, thời điểm train, metrics) vào `models/`.
 `/models` và `/ready` đọc manifest để báo version.

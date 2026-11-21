@@ -1,8 +1,8 @@
 """Quản lý vòng đời model: nạp một lần khi khởi động, tái sử dụng, reload nóng.
 
 Service không bao giờ đọc ``.joblib`` theo từng request. Mỗi model được nạp
-một lần và giữ trong bộ nhớ; ``POST /admin/reload`` xoá cache để nạp lại sau
-khi train lại.
+một lần và giữ trong bộ nhớ; ``POST /admin/reload`` thay model đang dùng
+sau khi nạp thành công tệp đã huấn luyện.
 """
 
 from __future__ import annotations
@@ -133,24 +133,27 @@ class ModelStore:
             if key in self._models:
                 return self._models[key]
 
-            if not spec.path.exists():
-                raise ModelNotReady(
-                    f"Chưa có file model cho '{key}' tại {spec.path}. "
-                    "Hãy chạy: python scripts/train.py"
-                )
+            return self._load(spec)
 
-            try:
-                model = spec.loader(spec.path)
-            except Exception as exc:  # noqa: BLE001 - biến mọi lỗi nạp thành 503
-                self._errors[key] = str(exc)
-                logger.exception("Nạp model '%s' thất bại", key)
-                raise ModelNotReady(f"Không nạp được model '{key}': {exc}") from exc
+    def _load(self, spec: ModelSpec) -> Any:
+        key = spec.key
+        if not spec.path.is_file():
+            message = f"Thiếu tệp model {spec.path.name}. Hãy chạy scripts/train.py."
+            self._errors[key] = message
+            raise ModelNotReady(message)
 
-            self._models[key] = model
-            self._errors.pop(key, None)
-            self._loaded_at[key] = datetime.now(tz=timezone.utc).isoformat()
-            logger.info("Đã nạp model '%s' từ %s", key, spec.path)
-            return model
+        try:
+            model = spec.loader(spec.path)
+        except Exception as exc:  # noqa: BLE001 - biến mọi lỗi nạp thành 503
+            self._errors[key] = str(exc)
+            logger.exception("Nạp model '%s' thất bại", key)
+            raise ModelNotReady(f"Không nạp được model '{key}': {exc}") from exc
+
+        self._models[key] = model
+        self._errors.pop(key, None)
+        self._loaded_at[key] = datetime.now(tz=timezone.utc).isoformat()
+        logger.info("Đã nạp model '%s' từ %s", key, spec.path)
+        return model
 
     def preload(self) -> None:
         """Nạp trước toàn bộ model; lỗi được log lại để service vẫn khởi động."""
@@ -160,12 +163,14 @@ class ModelStore:
             except ModelNotReady as exc:
                 logger.warning("Bỏ qua model '%s': %s", key, exc)
 
-    def reload(self) -> list[dict[str, Any]]:
-        with self._lock:
-            self._models.clear()
-            self._errors.clear()
-            self._loaded_at.clear()
-        self.preload()
+    def reload(self, key: str | None = None) -> list[dict[str, Any]]:
+        specs = (self._specs[key],) if key is not None else self._specs.values()
+        for spec in specs:
+            with self._lock:
+                try:
+                    self._load(spec)
+                except ModelNotReady as exc:
+                    logger.warning("Giữ nguyên trạng thái model '%s': %s", spec.key, exc)
         return self.info()
 
     def info(self) -> list[dict[str, Any]]:

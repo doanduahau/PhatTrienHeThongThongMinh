@@ -6,6 +6,7 @@ import { productIdParamSchema } from "../validators/product.validator.js";
 import {
   cartSuggestionQuerySchema,
   featuredQuerySchema,
+  forYouQuerySchema,
   recommendationLimitSchema,
   smartSearchQuerySchema,
 } from "../validators/recommendation.validator.js";
@@ -47,11 +48,11 @@ export const getCartSuggestions = async (req, res) => {
 };
 
 export const getForYou = async (req, res) => {
-  const query = validateOrReject(res, recommendationLimitSchema, req.query);
+  const query = validateOrReject(res, forYouQuerySchema, req.query);
   if (!query) return;
 
   try {
-    const data = await recommendationService.getForYou(req.user.id, query.limit);
+    const data = await recommendationService.getForYou(req.user.id, query.limit, query.slug);
     return sendSuccess(res, data, "Lấy gợi ý cá nhân hóa thành công!");
   } catch (error) {
     return sendAppError(res, error, "Lấy gợi ý cá nhân hóa thất bại!");

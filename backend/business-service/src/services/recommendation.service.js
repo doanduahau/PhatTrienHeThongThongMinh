@@ -32,7 +32,8 @@ const decorate = (product, meta = {}) => ({
   ...meta,
 });
 
-/** Gắn dữ liệu sản phẩm thật vào danh sách product_id ML trả về, giữ nguyên thứ tự. */
+/** Gắn dữ liệu sản phẩm thật vào danh sách product_id ML trả về, giữ nguyên thứ tự.
+ * Model có thể còn nhắc tới hàng đã ngưng bán -> lọc ở đây để không lộ ra storefront. */
 const hydrateScoredItems = async (items = []) => {
   const ids = [
     ...new Set(
@@ -44,7 +45,7 @@ const hydrateScoredItems = async (items = []) => {
   if (ids.length === 0) return [];
 
   const products = await prisma.product.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, isActive: true },
     include: productInclude,
   });
   const byId = new Map(products.map((product) => [product.id, product]));
@@ -55,9 +56,13 @@ const hydrateScoredItems = async (items = []) => {
   });
 };
 
-const fallbackFeatured = async (categoryId, limit) => {
+const fallbackFeatured = async (categoryId, limit, categorySlugs = []) => {
   const products = await prisma.product.findMany({
-    where: categoryId ? { categoryId } : {},
+    where: {
+      isActive: true,
+      ...(categoryId ? { categoryId } : {}),
+      ...(categorySlugs.length ? { category: { slug: { in: categorySlugs } } } : {}),
+    },
     orderBy: [{ rating: "desc" }, { id: "asc" }],
     take: limit,
     include: productInclude,
@@ -79,6 +84,7 @@ export const getSimilarProducts = async (productId, limit = 8) => {
   if (items.length === 0) {
     const fallbackRows = await prisma.product.findMany({
       where: {
+        isActive: true,
         id: { not: productId },
         OR: [{ categoryId: product.categoryId }, { brandId: product.brandId }],
       },
@@ -117,6 +123,7 @@ export const getCartSuggestions = async (userId, limit = 6) => {
 
     const fallbackRows = await prisma.product.findMany({
       where: {
+        isActive: true,
         id: { notIn: cartProductIds },
         ...(categoryIds.length ? { categoryId: { in: categoryIds } } : {}),
       },
@@ -132,18 +139,22 @@ export const getCartSuggestions = async (userId, limit = 6) => {
 };
 
 /** Gợi ý cá nhân hóa (Cosine + K-Means). Cold-start -> featured. */
-export const getForYou = async (userId, limit = 8) => {
-  const response = await mlClient.personalized(userId, limit);
+export const getForYou = async (userId, limit = 8, categorySlugs = []) => {
+  const response = await mlClient.personalized(userId, limit, categorySlugs);
 
   if (response && !response.cold_start && response.items?.length) {
-    return { source: "ml", model: response.model ?? null, items: await hydrateScoredItems(response.items) };
+    const hydrated = await hydrateScoredItems(response.items);
+    const items = categorySlugs.length
+      ? hydrated.filter((product) => categorySlugs.includes(product.category?.slug))
+      : hydrated;
+    if (items.length > 0) return { source: "ml", model: response.model ?? null, items };
   }
 
   return {
     source: "fallback",
     reason: response?.cold_start ? "cold_start" : "ml_unavailable",
     model: null,
-    items: await fallbackFeatured(undefined, limit),
+    items: await fallbackFeatured(undefined, limit, categorySlugs),
   };
 };
 

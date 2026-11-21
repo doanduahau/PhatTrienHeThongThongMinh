@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { catalogApi } from "@/lib/api";
+import { getStorefrontRecommendations } from "@/lib/home-data";
 import type { CategoryGroup } from "@/lib/category-groups";
 import type { SmartSearchResult } from "@/lib/types";
 import { money, resolveImage } from "@/lib/format";
@@ -202,7 +203,7 @@ async function ProductResults({
   }
 
   return (
-    <div>
+    <div id="product-results-section">
       {/* Header đếm số lượng & sắp xếp */}
       <div className="mb-6 flex h-11 items-center justify-between gap-4 border-b border-line pb-4">
         <span className="text-base font-semibold leading-none text-ink">
@@ -295,9 +296,10 @@ export async function CatalogView({
 }) {
   const slugQuery = slugs.join(",");
 
-  const [categories, brands] = await Promise.all([
+  const [categories, brands, recommendations] = await Promise.all([
     catalogApi.categories().catch(() => []),
     catalogApi.brands(slugQuery ? { slug: slugQuery } : undefined).catch(() => []),
+    getStorefrontRecommendations(slugQuery),
   ]);
 
   const currentCategory = slugs.length === 1
@@ -310,16 +312,19 @@ export async function CatalogView({
     .featured(8, currentCategory?.id)
     .then((data) => data.items)
     .catch(() => [] as SmartSearchResult["items"]);
-  const featuredProduct = featuredItems[0] ?? null;
+  const recommendedProduct = recommendations.items[0];
+  const bannerRecommendation = recommendedProduct
+    ? { product: recommendedProduct, title: recommendations.title }
+    : null;
 
   return (
     <>
       <CategoryBanner
         category={group ?? currentCategory}
-        featuredProduct={featuredProduct}
+        recommendation={bannerRecommendation}
       />
 
-      <Container className="grid gap-8 py-10 lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_19rem]">
+      <Container className="grid items-start gap-8 py-10 lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_19rem]">
         <CategoryFilters slugs={slugs} basePath={basePath} brands={brands} />
 
         <Suspense fallback={<ProductResultsSkeleton />}>

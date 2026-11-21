@@ -26,21 +26,18 @@ export type NavGroupColumn = {
   links: NavGroupLink[];
 };
 
-export type NavFeaturedCard = {
+export type NavRecommendationCard = {
   title: string;
   href: string;
   image: string;
 };
 
 export type NavGroup = {
+  slug: string;
   name: string;
   viewAll: NavGroupLink;
   columns: NavGroupColumn[];
-  featured?: {
-    large: NavFeaturedCard;
-    small1: NavFeaturedCard;
-    small2: NavFeaturedCard;
-  };
+  recommendations?: { title: string; cards: NavRecommendationCard[] };
 };
 
 /** Trang danh mục kèm bộ lọc backend cơ bản (không dùng q/ML ở trang lọc). */
@@ -52,25 +49,9 @@ const catalog = (slug: string, filters?: Record<string, string>) => {
 /** Mega-menu tĩnh: nhóm → cột danh mục → link bộ lọc. Giá trị enum khớp DB (SELECT DISTINCT). */
 export const NAV_GROUPS: NavGroup[] = [
   {
+    slug: "gaming-gear",
     name: "Gaming Gear",
     viewAll: { label: "Xem tất cả Gaming Gear", href: groupPath("gaming-gear") },
-    featured: {
-      large: {
-        title: "Wooting 60HE+",
-        href: "/san-pham/228",
-        image: "https://media.karousell.com/media/photos/products/2023/10/23/instock_wooting_60he__ansi_lay_1698061253_404deee0_progressive",
-      },
-      small1: {
-        title: "Razer Viper V3 Pro",
-        href: "/san-pham/21",
-        image: "https://cdn.4games.pro/storage/products/4785/9d05249c0cfc48326d9bcc095eca198e.jpg",
-      },
-      small2: {
-        title: "Logitech G Pro X",
-        href: "/san-pham/1",
-        image: "https://cdn.shopify.com/s/files/1/0636/9044/0949/products/chu-t-khong-day-sieu-nh-logitech-g-pro-x-superlight-wireless-37089285996789.jpg?v=1677194289",
-      },
-    },
     columns: [
       {
         name: "Chuột Gaming",
@@ -113,25 +94,9 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    slug: "office-gear",
     name: "Office Gear",
     viewAll: { label: "Xem tất cả Office Gear", href: groupPath("office-gear") },
-    featured: {
-      large: {
-        title: "Herman Miller Aeron",
-        href: "/san-pham/328",
-        image: "https://www.theofficefurniturestore.co.uk/media/catalog/product/cache/1/image/1200x1200/9df78eab33525d08d6e5fb8d27136e95/a/e/aeron_mineral_frame_satin_chassis_dark_vapour_base_rear.jpg",
-      },
-      small1: {
-        title: "Embody Gaming",
-        href: "/san-pham/330",
-        image: "https://cdn.shopify.com/s/files/1/0411/4448/3995/products/Embody_Cyan_02_dc8c17b4-3a11-46e1-a643-31c21a6278a4_1280x1280.png?v=1628693749",
-      },
-      small2: {
-        title: "Steelcase Gesture",
-        href: "/san-pham/331",
-        image: "https://cdn.shopify.com/s/files/1/0370/9557/1591/products/971DFC6C-F7D3-4256-96C9-56CD0E0657E1_1_201_a.jpg?v=1588580056",
-      },
-    },
     columns: [
       {
         name: "Ghế công thái học",

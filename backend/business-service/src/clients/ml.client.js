@@ -9,6 +9,8 @@ import { env } from "../config/env.js";
  * - Không retry nhiều lần: ML là thành phần phụ, ưu tiên độ trễ của backend.
  */
 
+const ML_ADMIN_TIMEOUT_MS = 30000;
+
 const buildUrl = (path, query) => {
   const url = new URL(path, env.mlServiceUrl);
   if (query) {
@@ -63,10 +65,10 @@ export const mlClient = {
       body: { product_ids: productIds, top_n: topN },
     }),
 
-  personalized: (userId, topN = 8) =>
+  personalized: (userId, topN = 8, categorySlugs = []) =>
     request("/recommend/personalized", {
       method: "POST",
-      body: { user_id: userId, top_n: topN },
+      body: { user_id: userId, top_n: topN, category_slugs: categorySlugs },
     }),
 
   featured: (categoryId = undefined, limit = 10) =>
@@ -74,6 +76,17 @@ export const mlClient = {
 
   parseSearch: (query) =>
     request("/search/parse", { method: "POST", body: { query } }),
+
+  adminRequest: (path, { method = "GET", query, body } = {}) =>
+    fetch(buildUrl(`/admin/${path}`, query), {
+      method,
+      body,
+      headers: {
+        "X-Internal-Token": env.mlInternalToken,
+        ...(body ? { "Content-Type": "application/octet-stream" } : {}),
+      },
+      signal: AbortSignal.timeout(ML_ADMIN_TIMEOUT_MS),
+    }).catch(() => null),
 };
 
 export default mlClient;

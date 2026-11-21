@@ -39,6 +39,7 @@ class BundleRequest(BaseModel):
 class PersonalizedRequest(BaseModel):
     user_id: str | int
     top_n: int = Field(default=8, ge=1, le=50)
+    category_slugs: list[str] = Field(default_factory=list, max_length=10)
 
 
 class SearchParseRequest(BaseModel):

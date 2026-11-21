@@ -51,6 +51,7 @@ const buildWhere = ({
   brand,
   slug,
   search,
+  isActive = true,
   inStock,
   minPrice,
   maxPrice,
@@ -77,6 +78,8 @@ const buildWhere = ({
   maxLoadKg,
 }) => {
   const where = {};
+  // Mặc định chỉ hàng đang bán; "any" là đặc quyền admin (controller mới được truyền).
+  if (isActive !== "any") where.isActive = isActive === true;
   if (categoryId) where.categoryId = categoryId;
   if (brandId) where.brandId = brandId;
   if (brand) where.brand = { name: { contains: brand, mode: "insensitive" } };
@@ -233,9 +236,10 @@ const findDetailRow = async (slug, productId) => {
   return prisma[model].findUnique({ where: { productId } });
 };
 
-export const getById = async (id) => {
-  const product = await prisma.product.findUnique({
-    where: { id },
+/** Khách chỉ xem được hàng đang bán; admin cần `includeInactive` để sửa hàng đã ngưng bán. */
+export const getById = async (id, { includeInactive = false } = {}) => {
+  const product = await prisma.product.findFirst({
+    where: { id, ...(includeInactive ? {} : { isActive: true }) },
     include: productRelationsInclude,
   });
 

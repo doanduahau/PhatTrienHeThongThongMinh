@@ -19,7 +19,9 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, normalize
+
+from .product_tags import PREFERENCE_LABELS, build_preference_tags, build_product_tags, product_category
 
 
 class PersonalizedRecommender:
@@ -89,6 +91,9 @@ class PersonalizedRecommender:
             self.products_df["product_id"] = self.products_df["id"]
 
         self.products_df["product_id"] = self.products_df["product_id"].astype(str)
+        self.products_df["tags"] = self.products_df.apply(build_product_tags, axis=1)
+        self.products_df["preference_tags"] = self.products_df.apply(build_preference_tags, axis=1)
+        self.products_df["category_key"] = self.products_df.apply(product_category, axis=1)
         self.product_id_to_idx = {
             pid: idx for idx, pid in enumerate(self.products_df["product_id"])
         }
@@ -97,12 +102,16 @@ class PersonalizedRecommender:
         corpus = self.products_df.apply(self._build_item_text, axis=1).tolist()
         text_matrix = self.tfidf.fit_transform(corpus).toarray()
 
+        preferences = np.array([
+            [label in tags for label in PREFERENCE_LABELS]
+            for tags in self.products_df["preference_tags"]
+        ], dtype=float)
+        features = [text_matrix, normalize(preferences) * 0.45]
         if "price" in self.products_df.columns:
             prices = self.products_df[["price"]].fillna(0).to_numpy()
             price_scaled = self.scaler.fit_transform(prices)
-            self.product_features = np.hstack([text_matrix, price_scaled * 0.2])
-        else:
-            self.product_features = text_matrix
+            features.append(price_scaled * 0.2)
+        self.product_features = np.hstack(features)
 
         # 2. Xây dựng vector hồ sơ người dùng (User Profile Vector)
         if interactions_df.empty or "user_id" not in interactions_df.columns:
@@ -171,14 +180,21 @@ class PersonalizedRecommender:
         self,
         user_id: str | int,
         top_n: int = 10,
+        category_slugs: tuple[str, ...] | list[str] = (),
     ) -> list[dict[str, Any]]:
         """Gợi ý top N sản phẩm cá nhân hóa cho một người dùng cụ thể."""
         if self.product_features is None:
             raise RuntimeError("Mô hình chưa được fit(). Hãy gọi fit() hoặc fit_from_db() trước.")
 
         uid_str = str(user_id)
+        candidates = self.products_df
+        if category_slugs:
+            categories = {slug.replace("-", "_") for slug in category_slugs}
+            keys = candidates["category_key"] if "category_key" in candidates else candidates.apply(product_category, axis=1)
+            candidates = candidates[keys.isin(categories)]
+
         if uid_str not in self.user_profiles:
-            return self._cold_start_recommend(top_n)
+            return self._cold_start_recommend(top_n, candidates)
 
         user_vec = self.user_profiles[uid_str].reshape(1, -1)
         sim_scores = cosine_similarity(user_vec, self.product_features)[0]
@@ -190,7 +206,8 @@ class PersonalizedRecommender:
                 if pid in popular_in_cluster:
                     sim_scores[idx] += 0.05
 
-        sorted_indices = np.argsort(sim_scores)[::-1]
+        indices = candidates.index.to_numpy(dtype=int)
+        sorted_indices = indices[np.argsort(-sim_scores[indices], kind="stable")]
 
         results: list[dict[str, Any]] = []
         for idx in sorted_indices:
@@ -210,9 +227,9 @@ class PersonalizedRecommender:
 
         return results
 
-    def _cold_start_recommend(self, top_n: int) -> list[dict[str, Any]]:
+    def _cold_start_recommend(self, top_n: int, candidates: pd.DataFrame) -> list[dict[str, Any]]:
         """Gợi ý fallback cho người dùng mới dựa trên rating cao trong DB."""
-        df_copy = self.products_df.copy()
+        df_copy = candidates
         if "rating" in df_copy.columns:
             df_copy = df_copy.sort_values(by="rating", ascending=False)
         items = df_copy.head(top_n)

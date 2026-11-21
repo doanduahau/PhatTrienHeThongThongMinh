@@ -1,20 +1,34 @@
 import type {
+  AdminCustomer,
+  AdminCustomerList,
+  AdminOrder,
+  AdminOrderList,
+  AdminReviewList,
   Brand,
   Cart,
   Category,
   FeaturedList,
+  LowStockItem,
+  MlDataset,
+  MlModel,
+  MlStatus,
   Order,
   OrderList,
   Product,
+  ProductInput,
   ProductList,
+  RevenuePoint,
   Session,
   ShippingMethod,
   SmartSearchResult,
+  StatsOverview,
+  TopProduct,
   User,
 } from "./types";
 
+// Cổng 5001 vì macOS chạy ControlCenter/AirPlay Receiver trên 5000; .env.example vẫn là 3000.
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
 export class ApiError extends Error {
   httpStatus: number;
@@ -81,14 +95,14 @@ async function request<T>(
 /** Gọi endpoint cần đăng nhập qua proxy same-origin — cookie httpOnly tự đính kèm. */
 async function authRequest<T>(
   path: string,
-  { method = "GET", body }: { method?: string; body?: unknown } = {},
+  { method = "GET", body, file }: { method?: string; body?: unknown; file?: File } = {},
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api/proxy/${path}`, {
       method,
-      headers: { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { "Content-Type": file ? "application/octet-stream" : "application/json" },
+      body: file ?? (body === undefined ? undefined : JSON.stringify(body)),
       cache: "no-store",
     });
   } catch {
@@ -158,6 +172,9 @@ export const catalogApi = {
     ),
 };
 
+const mlDatasetPath = (scope: MlDataset["scope"], name: string) =>
+  `admin/ml/datasets/${scope}/${encodeURIComponent(name)}`;
+
 /** API phía client — đăng nhập qua cookie httpOnly, không cache. */
 export const api = {
   smartSearch: catalogApi.smartSearch,
@@ -177,6 +194,10 @@ export const api = {
   }) =>
     authFetch<Session>("/api/auth/register", { method: "POST", body: payload }),
   me: () => authFetch<User>("/api/auth/me"),
+  updateProfile: (payload: { fullName?: string; email?: string; address?: string }) =>
+    authRequest<User>("auth/me", { method: "PUT", body: payload }),
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    authRequest<unknown>("auth/password", { method: "PUT", body: payload }),
   logout: () => authFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
 
   shippingMethods: () => request<ShippingMethod[]>("/api/shipping-methods"),
@@ -204,4 +225,143 @@ export const api = {
   }) => authRequest<Order>("orders", { method: "POST", body: payload }),
   cancelOrder: (id: number) =>
     authRequest<Order>(`orders/${id}/cancel`, { method: "PATCH" }),
+
+  /**
+   * Quản trị — mọi quyền thật đều do backend chặn (requireAdmin); UI chỉ hiển thị
+   * cho token admin. Danh mục/thương hiệu/đơn hàng dùng PATCH/PUT theo validator backend.
+   */
+  admin: {
+    orders: (params: QueryParams = {}) =>
+      authRequest<AdminOrderList>(`admin/orders${buildQuery(params)}`),
+    order: (id: number) => authRequest<AdminOrder>(`admin/orders/${id}`),
+    setOrderStatus: (id: number, status: string) =>
+      authRequest<AdminOrder>(`admin/orders/${id}/status`, {
+        method: "PATCH",
+        body: { status },
+      }),
+    setOrderPayment: (id: number, paymentStatus: string) =>
+      authRequest<AdminOrder>(`admin/orders/${id}/payment`, {
+        method: "PATCH",
+        body: { paymentStatus },
+      }),
+
+    customers: (params: QueryParams = {}) =>
+      authRequest<AdminCustomerList>(`admin/users${buildQuery(params)}`),
+    createCustomer: (payload: {
+      username: string;
+      email: string;
+      password: string;
+      address?: string;
+      role?: string;
+    }) =>
+      authRequest<AdminCustomer>("admin/users", {
+        method: "POST",
+        body: payload,
+      }),
+    setCustomerLock: (id: number, isLocked: boolean) =>
+      authRequest<AdminCustomer>(`admin/users/${id}/lock`, {
+        method: "PATCH",
+        body: { isLocked },
+      }),
+    setCustomerRole: (id: number, role: string) =>
+      authRequest<AdminCustomer>(`admin/users/${id}/role`, {
+        method: "PATCH",
+        body: { role },
+      }),
+    resetCustomerPassword: (id: number, password: string) =>
+      authRequest<AdminCustomer>(`admin/users/${id}/reset-password`, {
+        method: "POST",
+        body: { password },
+      }),
+    deleteCustomer: (id: number) =>
+      authRequest<AdminCustomer>(`admin/users/${id}`, { method: "DELETE" }),
+
+    reviews: (params: QueryParams = {}) =>
+      authRequest<AdminReviewList>(`admin/reviews${buildQuery(params)}`),
+    deleteReview: (productId: number, reviewId: string) =>
+      authRequest<unknown>(`products/${productId}/reviews/${reviewId}`, {
+        method: "DELETE",
+      }),
+
+    products: (params: QueryParams = {}) =>
+      authRequest<ProductList>(`products${buildQuery(params)}`),
+    createProduct: (payload: ProductInput) =>
+      authRequest<Product>("products", { method: "POST", body: payload }),
+    updateProduct: (id: number, payload: ProductInput) =>
+      authRequest<Product>(`products/${id}`, { method: "PUT", body: payload }),
+    deleteProduct: (id: number) =>
+      authRequest<unknown>(`products/${id}`, { method: "DELETE" }),
+
+    categories: () => authRequest<Category[]>("categories"),
+    createCategory: (payload: { name: string; slug: string }) =>
+      authRequest<Category>("categories", { method: "POST", body: payload }),
+    updateCategory: (id: number, payload: { name?: string; slug?: string }) =>
+      authRequest<Category>(`categories/${id}`, { method: "PUT", body: payload }),
+    deleteCategory: (id: number) =>
+      authRequest<unknown>(`categories/${id}`, { method: "DELETE" }),
+
+    brands: () => authRequest<Brand[]>("brands"),
+    createBrand: (name: string) =>
+      authRequest<Brand>("brands", { method: "POST", body: { name } }),
+    updateBrand: (id: number, name: string) =>
+      authRequest<Brand>(`brands/${id}`, { method: "PUT", body: { name } }),
+    deleteBrand: (id: number) =>
+      authRequest<unknown>(`brands/${id}`, { method: "DELETE" }),
+
+    shipping: () => authRequest<ShippingMethod[]>("shipping-methods"),
+    createShipping: (payload: {
+      name: string;
+      fee: number;
+      estimatedDays?: string;
+      isActive?: boolean;
+    }) =>
+      authRequest<ShippingMethod>("shipping-methods", {
+        method: "POST",
+        body: payload,
+      }),
+    updateShipping: (
+      id: string,
+      payload: {
+        name?: string;
+        fee?: number;
+        estimatedDays?: string;
+        isActive?: boolean;
+      },
+    ) =>
+      authRequest<ShippingMethod>(`shipping-methods/${id}`, {
+        method: "PUT",
+        body: payload,
+      }),
+    deleteShipping: (id: string) =>
+      authRequest<unknown>(`shipping-methods/${id}`, { method: "DELETE" }),
+
+    stats: {
+      overview: () => authRequest<StatsOverview>("admin/stats/overview"),
+      revenue: (params: QueryParams = {}) =>
+        authRequest<{ groupBy: string; items: RevenuePoint[] }>(
+          `admin/stats/revenue${buildQuery(params)}`,
+        ),
+      topProducts: (limit = 5) =>
+        authRequest<{ items: TopProduct[] }>(
+          `admin/stats/top-products${buildQuery({ limit })}`,
+        ),
+      lowStock: (threshold = 5, limit = 8) =>
+        authRequest<{ threshold: number; total: number; items: LowStockItem[] }>(
+          `admin/stats/low-stock${buildQuery({ threshold, limit })}`,
+        ),
+    },
+
+    mlStatus: () => authRequest<MlStatus>("recommendations/ml-status"),
+    mlModels: () => authRequest<{ models: MlModel[] }>("admin/ml/models"),
+    mlDatasets: () => authRequest<{ datasets: MlDataset[] }>("admin/ml/datasets"),
+    mlDatasetUrl: ({ scope, name }: MlDataset) => `/api/proxy/${mlDatasetPath(scope, name)}`,
+    uploadMlDataset: (file: File) =>
+      authRequest<MlDataset>(mlDatasetPath("uploaded", file.name), { method: "PUT", file }),
+    deleteMlDataset: (name: string) =>
+      authRequest<{ name: string }>(mlDatasetPath("uploaded", name), { method: "DELETE" }),
+    reloadMl: (key?: string) =>
+      authRequest<{ reloaded: boolean; models: MlModel[] }>(`admin/ml/reload${buildQuery({ key })}`, {
+        method: "POST",
+      }),
+  },
 };

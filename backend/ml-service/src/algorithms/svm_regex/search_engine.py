@@ -53,6 +53,12 @@ class SmartSearchEngine:
 
         # 2. Bóc tách thuộc tính mềm (Regex)
         soft_tags = extract_soft_tags(cleaned_query)
+        categories = set(hard_constraints.get("categories") or [])
+        if "dinh_huong_fps" in soft_tags and categories & {"chuot", "ban_phim", "lot_chuot"}:
+            if "tai_nghe" not in categories:
+                soft_tags.remove("dinh_huong_fps")
+            if "game_cs2_valorant" not in soft_tags:
+                soft_tags.append("game_cs2_valorant")
 
         # Kiểm tra xem có chứa bất kỳ thuộc tính/từ khóa sản phẩm máy tính nào không
         has_domain_features = (

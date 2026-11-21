@@ -48,6 +48,12 @@ export const checkout = async (userId, { shippingMethodId, shippingAddress, ship
       throw badRequest("Phương thức vận chuyển đã ngừng hoạt động!");
     }
 
+    // Ngăn đặt hàng đã ngưng bán (guest cart có thể giữ sản phẩm từ trước khi admin tắt)
+    const inactiveItem = cart.items.find((item) => !item.product.isActive);
+    if (inactiveItem) {
+      throw badRequest(`Sản phẩm "${inactiveItem.product.name}" đã ngừng bán, vui lòng bỏ khỏi giỏ hàng!`);
+    }
+
     let subtotal = 0;
 
     for (const item of cart.items) {
@@ -98,7 +104,7 @@ export const checkout = async (userId, { shippingMethodId, shippingAddress, ship
     return created;
   });
 
-  console.log(`[ORDER] tạo đơn #${order.id} cho user #${userId}, tổng ${order.totalAmount}`);
+  console.log(`[ORDER] tạo đơn ${order.code} (id #${order.id}) cho user #${userId}, tổng ${order.totalAmount}`);
   return order;
 };
 
@@ -195,10 +201,20 @@ export const cancelMyOrder = async (userId, orderId) => {
   });
 };
 
-export const getAllOrders = async ({ page, limit, status, userId, from, to }) => {
+export const getAllOrders = async ({ page, limit, status, userId, search, from, to }) => {
   const where = {};
   if (status) where.status = status;
   if (userId) where.userId = userId;
+  if (search) {
+    const contains = { contains: search, mode: "insensitive" };
+    // Tìm một chuỗi qua mọi danh tính đơn: mã DH, khách hàng, số điện thoại nhận hàng.
+    where.OR = [
+      { code: contains },
+      { shippingPhone: contains },
+      { user: { username: contains } },
+      { user: { email: contains } },
+    ];
+  }
   if (from || to) {
     where.createdAt = {};
     // `from`/`to` là ngày theo APP_TIME_ZONE, không phải nửa đêm UTC.

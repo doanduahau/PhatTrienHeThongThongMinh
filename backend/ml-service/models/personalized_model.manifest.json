@@ -1,9 +1,93 @@
 {
-  "version": "20261119182913",
-  "trained_at": "2026-11-19T18:29:13.948026+00:00",
+  "version": "20261121012646",
+  "trained_at": "2026-11-21T01:26:46.172048+00:00",
   "source": "train.py",
   "metrics": {
-    "users": 1,
-    "products": 405
+    "users": 6,
+    "products": 405,
+    "tagged_products": 405,
+    "distinct_product_tags": 54,
+    "preference_labels": {
+      "game_cs2_valorant": {
+        "label": "Game FPS",
+        "products": 115
+      },
+      "game_moba": {
+        "label": "Game MOBA",
+        "products": 14
+      },
+      "van_phong_lam_viec": {
+        "label": "Văn phòng và làm việc",
+        "products": 91
+      },
+      "setup_cong_thai_hoc": {
+        "label": "Công thái học",
+        "products": 117
+      },
+      "setup_toi_gian_minimalism": {
+        "label": "Setup tối giản",
+        "products": 58
+      },
+      "setup_rgb": {
+        "label": "Setup RGB",
+        "products": 17
+      },
+      "ket_noi_khong_day": {
+        "label": "Kết nối không dây",
+        "products": 221
+      },
+      "ket_noi_da_thiet_bi": {
+        "label": "Kết nối đa thiết bị",
+        "products": 106
+      },
+      "am_thanh": {
+        "label": "Âm thanh",
+        "products": 73
+      },
+      "dieu_khien_chuot_ban_phim": {
+        "label": "Chuột, bàn phím và lót chuột",
+        "products": 272
+      }
+    },
+    "preference_coverage": {
+      "arm-man-hinh": {
+        "products": 20,
+        "labeled": 20
+      },
+      "ban": {
+        "products": 10,
+        "labeled": 10
+      },
+      "ban-phim": {
+        "products": 100,
+        "labeled": 100
+      },
+      "chuot": {
+        "products": 154,
+        "labeled": 154
+      },
+      "ghe": {
+        "products": 20,
+        "labeled": 20
+      },
+      "lot-chuot": {
+        "products": 18,
+        "labeled": 18
+      },
+      "phu-kien-cong-thai-hoc": {
+        "products": 10,
+        "labeled": 10
+      },
+      "soundcard": {
+        "products": 10,
+        "labeled": 10
+      },
+      "tai-nghe": {
+        "products": 63,
+        "labeled": 63
+      }
+    },
+    "clusters": 3,
+    "data_source": "db"
   }
 }

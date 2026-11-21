@@ -1,19 +1,20 @@
 import { z } from "zod";
 
-const username = z
+// Export 3 trường để admin.user.validator dùng lại đúng quy tắc đăng ký, không tạo ra hai chuẩn khác nhau.
+export const username = z
   .string({ required_error: "Username là bắt buộc!" })
   .trim()
   .min(3, "Username phải có ít nhất 3 ký tự!")
   .max(50, "Username tối đa 50 ký tự!")
   .regex(/^[a-zA-Z0-9_]+$/, "Username chỉ gồm chữ, số và dấu gạch dưới!");
 
-const email = z
+export const email = z
   .string({ required_error: "Email là bắt buộc!" })
   .trim()
   .email("Email không hợp lệ!")
   .max(100, "Email tối đa 100 ký tự!");
 
-const password = z
+export const password = z
   .string({ required_error: "Mật khẩu là bắt buộc!" })
   .min(6, "Mật khẩu phải có ít nhất 6 ký tự!")
   .max(72, "Mật khẩu tối đa 72 ký tự!");
@@ -35,11 +36,12 @@ export const loginSchema = z.object({
 
 export const updateProfileSchema = z
   .object({
+    fullName: z.string().trim().max(100, "Họ và tên tối đa 100 ký tự!").optional(),
     email: email.optional(),
     address: z.string().trim().max(255, "Địa chỉ tối đa 255 ký tự!").optional(),
   })
-  .refine((data) => data.email !== undefined || data.address !== undefined, {
-    message: "Cần ít nhất một trường (email, address) để cập nhật!",
+  .refine((data) => data.fullName !== undefined || data.email !== undefined || data.address !== undefined, {
+    message: "Cần ít nhất một trường (fullName, email, address) để cập nhật!",
   });
 
 export const changePasswordSchema = z.object({

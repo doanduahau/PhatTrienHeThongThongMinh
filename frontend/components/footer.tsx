@@ -23,8 +23,8 @@ function ContactContent() {
       </p>
       <p>
         <span className="block text-footer-text/60">Showroom</span>
-        778/B1 Nguyễn Kiệm, Phú Nhuận, TP.HCM
-        <span className="block">273 Nguyễn Văn Lượng, Gò Vấp, TP.HCM</span>
+        Cơ sở 1: 97 Man Thiện, P. Hiệp Phú, TP. Thủ Đức, TP.HCM
+        <span className="block">Cơ sở 2: 11 Nguyễn Đình Chiểu, P. Đa Kao, Quận 1, TP.HCM</span>
         <span className="block text-footer-text/60">8:30 – 20:00</span>
       </p>
     </div>

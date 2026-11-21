@@ -96,7 +96,7 @@ def recommend_personalized(payload: PersonalizedRequest) -> RecommendResponse:
             items=[],
         )
 
-    raw = recommender.recommend(user_id, top_n=payload.top_n)
+    raw = recommender.recommend(user_id, top_n=payload.top_n, category_slugs=payload.category_slugs)
     items = [
         ScoredItem(product_id=str(row["product_id"]), score=float(row["match_score"]))
         for row in raw
