@@ -105,7 +105,7 @@ function NavGroupItem({
 }) {
   return (
     <div
-      className="group relative flex h-[4.5rem] items-center"
+      className="group flex h-[4.5rem] items-center"
       onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
     >
       <Link
@@ -134,8 +134,9 @@ function NavGroupItem({
           </svg>
         </span>
       </Link>
-      <div className="pointer-events-none absolute left-0 top-full z-50 w-[78rem] max-w-[calc(100vw-3rem)] pt-2 opacity-0 transition-[opacity,transform] delay-75 duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-        <div className="flex -translate-y-1 justify-between gap-8 rounded-card border border-line bg-bg p-8 shadow-float transition-transform duration-200 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0">
+      <div className="pointer-events-none absolute inset-x-0 top-full z-50 pt-2 opacity-0 transition-[opacity,transform] delay-75 duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+        <Container>
+          <div className="flex -translate-y-1 justify-between gap-8 rounded-card border border-line bg-bg p-8 shadow-float transition-transform duration-200 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0">
           {/* Cột trái: Tên nhóm và link Xem tất cả */}
           <div className="flex w-44 shrink-0 flex-col gap-2 border-e border-line pe-6">
             <span className="text-xl font-bold tracking-tight text-ink">
@@ -184,69 +185,36 @@ function NavGroupItem({
             ))}
           </div>
 
-          {/* Cột phải: Khối ảnh sản phẩm nổi bật tương tự Phong Cách Xanh */}
-          {group.featured ? (
-            <div className="flex w-72 shrink-0 flex-col gap-3 ps-2">
-              {/* Banner ảnh to phía trên */}
-              <Link
-                href={group.featured.large.href}
-                className="group/feat relative block aspect-[16/10] w-full overflow-hidden rounded-xl border border-line bg-subtle"
-              >
-                <Image
-                  src={group.featured.large.image}
-                  alt={group.featured.large.title}
-                  fill
-                  sizes="288px"
-                  className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-6">
-                  <span className="inline-block rounded-md bg-white/90 px-2 py-0.5 text-xs font-bold text-ink backdrop-blur-sm">
-                    {group.featured.large.title}
-                  </span>
-                </div>
-              </Link>
-
-              {/* 2 banner nhỏ phía dưới */}
+          {group.recommendations?.cards.length ? (
+            <section aria-label={`${group.recommendations.title} · ${group.name}`} className="w-72 shrink-0 ps-2">
+              <h2 className="mb-3 text-[15px] font-bold text-ink">{group.recommendations.title}</h2>
               <div className="grid grid-cols-2 gap-2.5">
-                <Link
-                  href={group.featured.small1.href}
-                  className="group/feat relative block aspect-[4/3] w-full overflow-hidden rounded-xl border border-line bg-subtle"
-                >
-                  <Image
-                    src={group.featured.small1.image}
-                    alt={group.featured.small1.title}
-                    fill
-                    sizes="140px"
-                    className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4">
-                    <span className="block truncate text-[11px] font-bold text-white">
-                      {group.featured.small1.title}
+                {group.recommendations.cards.map((card, index) => (
+                  <Link
+                    key={card.href}
+                    href={card.href}
+                    className={`group/feat relative block overflow-hidden rounded-xl border border-line bg-subtle ${
+                      index === 0 ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]"
+                    }`}
+                  >
+                    <Image
+                      src={card.image}
+                      alt=""
+                      fill
+                      sizes={index === 0 ? "280px" : "135px"}
+                      unoptimized={card.image.startsWith("http:")}
+                      className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-2 pt-6 text-xs font-bold text-white">
+                      {card.title}
                     </span>
-                  </div>
-                </Link>
-
-                <Link
-                  href={group.featured.small2.href}
-                  className="group/feat relative block aspect-[4/3] w-full overflow-hidden rounded-xl border border-line bg-subtle"
-                >
-                  <Image
-                    src={group.featured.small2.image}
-                    alt={group.featured.small2.title}
-                    fill
-                    sizes="140px"
-                    className="object-cover transition-transform duration-300 group-hover/feat:scale-105"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4">
-                    <span className="block truncate text-[11px] font-bold text-white">
-                      {group.featured.small2.title}
-                    </span>
-                  </div>
-                </Link>
+                  </Link>
+                ))}
               </div>
-            </div>
+            </section>
           ) : null}
         </div>
+        </Container>
       </div>
     </div>
   );
@@ -502,40 +470,51 @@ export function Header({ nav }: { nav: NavGroup[] }) {
         {/* Thanh thông báo chạy vòng ở trên cùng: luôn nền đen đặc, chữ trắng */}
         <AnnouncementBar />
 
-        <Container className="flex h-[4.5rem] items-center gap-3 lg:gap-4">
-          <Wordmark isTransparent={isTransparent} />
+        <div className="relative">
+          <Container className="flex h-[4.5rem] items-center gap-3 lg:gap-4">
+            <Wordmark isTransparent={isTransparent} />
 
-          {nav.length > 0 ? (
-            <nav
-              aria-label="Danh mục sản phẩm"
-              className="hidden shrink-0 items-center gap-5 xl:flex"
-            >
-              {nav.map((group) => (
-                <NavGroupItem
-                  key={group.name}
-                  group={group}
-                  isActive={isGroupActive(group)}
-                  isTransparent={isTransparent}
-                />
-              ))}
-              {INFO_LINKS.map((link) => (
-                <NavPlainItem
-                  key={link.href}
-                  href={link.href}
-                  label={link.label}
-                  isTransparent={isTransparent}
-                />
-              ))}
-            </nav>
-          ) : null}
+            {nav.length > 0 ? (
+              <nav
+                aria-label="Danh mục sản phẩm"
+                className="hidden shrink-0 items-center gap-5 xl:flex"
+              >
+                {nav.map((group) => (
+                  <NavGroupItem
+                    key={group.name}
+                    group={group}
+                    isActive={isGroupActive(group)}
+                    isTransparent={isTransparent}
+                  />
+                ))}
+                {INFO_LINKS.map((link) => (
+                  <NavPlainItem
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                    isTransparent={isTransparent}
+                  />
+                ))}
+              </nav>
+            ) : null}
 
-          {/* Thanh tìm kiếm trên Header */}
-          <SearchForm
-            isTransparent={isTransparent}
-            className="mx-auto hidden min-w-0 md:flex md:max-w-xs md:flex-1 lg:max-w-sm xl:max-w-md 2xl:max-w-xl"
-          />
+            {/* Thanh tìm kiếm trên Header */}
+            <SearchForm
+              isTransparent={isTransparent}
+              className="mx-auto hidden min-w-0 md:flex md:max-w-xs md:flex-1 lg:max-w-sm xl:max-w-md 2xl:max-w-xl"
+            />
 
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <div className="ml-auto flex items-center gap-1 md:ml-0">
+            {user?.role === "admin" ? (
+              <Link
+                href="/admin"
+                className={`rounded-btn px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                  isTransparent ? "text-white hover:bg-white/15" : "text-ink hover:bg-subtle"
+                }`}
+              >
+                Quản trị
+              </Link>
+            ) : null}
             <Link
               href={accountHref}
               aria-label={user ? `Tài khoản ${user.username}` : "Đăng nhập"}
@@ -613,6 +592,7 @@ export function Header({ nav }: { nav: NavGroup[] }) {
             </button>
           </div>
         </Container>
+      </div>
 
       </header>
 
@@ -714,6 +694,15 @@ export function Header({ nav }: { nav: NavGroup[] }) {
                   {link.label}
                 </Link>
               ))}
+              {user?.role === "admin" ? (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-btn px-3 py-2.5 text-sm font-medium text-accent hover:bg-subtle"
+                >
+                  Trang quản trị
+                </Link>
+              ) : null}
             </div>
           </nav>
         </>

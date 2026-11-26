@@ -24,6 +24,7 @@ def fetch_master_products_df() -> pd.DataFrame:
             p.id as product_id,
             p.name,
             c.id as category_id,
+            c.slug as category_slug,
             c.name as category_name,
             b.id as brand_id,
             b.name as brand,
@@ -62,6 +63,7 @@ def fetch_master_products_df() -> pd.DataFrame:
         LEFT JOIN headphones h ON h.product_id = p.id
         LEFT JOIN mousepads mp ON mp.product_id = p.id
         LEFT JOIN setups s ON s.product_id = p.id
+        WHERE p.is_active
         ORDER BY p.id;
     """
     with get_cursor(commit=False) as cur:
@@ -109,7 +111,7 @@ def fetch_order_transactions() -> list[list[str]]:
 
 
 def fetch_user_interactions() -> pd.DataFrame:
-    """Truy vấn lịch sử tương tác người dùng từ đơn hàng và giỏ hàng cho Cosine + K-Means."""
+    """Đọc đơn hàng, giỏ hàng và đánh giá tích cực cho Cosine + K-Means."""
     records = []
     with get_cursor(commit=False) as cur:
         # Hành vi mua (buy: trọng số 5.0)
@@ -126,6 +128,14 @@ def fetch_user_interactions() -> pd.DataFrame:
             SELECT c.user_id, ci.product_id, 'cart' as interaction_type, 3.0 as weight
             FROM carts c
             JOIN cart_items ci ON c.id = ci.cart_id;
+        """)
+        for u, p, itype, w in cur.fetchall():
+            records.append({"user_id": str(u), "product_id": str(p), "interaction_type": itype, "weight": float(w)})
+
+        cur.execute("""
+            SELECT user_id, product_id, 'rating', score - 2.5
+            FROM ratings
+            WHERE score >= 4;
         """)
         for u, p, itype, w in cur.fetchall():
             records.append({"user_id": str(u), "product_id": str(p), "interaction_type": itype, "weight": float(w)})
@@ -172,7 +182,8 @@ def fetch_featured_products_df(category_id: int | None = None) -> pd.DataFrame:
             WHERE o.status = 'delivered'
             GROUP BY oi.product_id
         ) sd ON sd.product_id = p.id
-        WHERE %(category_id)s::int IS NULL OR p.category_id = %(category_id)s::int
+        WHERE p.is_active
+          AND (%(category_id)s::int IS NULL OR p.category_id = %(category_id)s::int)
         ORDER BY p.id;
     """
     with get_cursor(commit=False) as cur:

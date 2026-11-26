@@ -10,6 +10,7 @@ import { sendMail } from "../utils/mailer.js";
 const publicUserSelect = {
   id: true,
   username: true,
+  fullName: true,
   email: true,
   address: true,
   role: true,
@@ -108,8 +109,9 @@ export const getProfile = async (userId) => {
   return user;
 };
 
-export const updateProfile = async (userId, { email, address }) => {
+export const updateProfile = async (userId, { fullName, email, address }) => {
   const data = {};
+  if (fullName !== undefined) data.fullName = fullName;
   if (address !== undefined) data.address = address;
 
   const current = await prisma.user.findUnique({ where: { id: userId } });

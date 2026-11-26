@@ -5,7 +5,8 @@ Thiết kế theo `docs/UI-UX-SKILLS.md` (bố cục tham khảo phongcachxanh.v
 
 ## Chạy local
 
-Cần business service chạy ở `http://localhost:3000` (xem `docs/Agents.md`).
+Cần business service chạy ở `http://localhost:5001` (xem `docs/Agents.md`). macOS chiếm cổng 5000 cho AirPlay,
+còn Next.js dev mặc định lấy 3000.
 
 ```bash
 cd frontend
@@ -24,13 +25,13 @@ Biến môi trường (`.env.local`, xem `.env.example`):
 
 | Biến | Mặc định | Ý nghĩa |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | Địa chỉ business service |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5001` | Địa chỉ business service |
 
 ## Routes
 
 | Route | Nội dung | Render |
 | :--- | :--- | :--- |
-| `/` | Trang chủ: hero slideshow, danh mục, gear bán chạy, smart search, cam kết, showroom | Server + Suspense |
+| `/` | Trang chủ: hero slideshow, danh mục, gear bán chạy, smart search, cam kết | Server + Suspense |
 | `/san-pham` | Tất cả sản phẩm + bộ lọc (hãng, sort, tìm thường / tìm hiểu câu `smart=1`) | Server, searchParams |
 | `/danh-muc/[slug]` | Listing một danh mục, hoặc trang nhóm gộp nhiều danh mục (`gaming-gear` = chuột + bàn phím + lót chuột + tai nghe, `office-gear` = ghế + phụ kiện CTH + bàn + soundcard + arm). Slug nằm ở path, không còn `?slug=` | Server, searchParams |
 | `/san-pham/[id]` | Chi tiết + thông số + sản phẩm tương tự (ML, có fallback) | Server |
@@ -49,5 +50,6 @@ lib/            # api.ts (typed fetch), types.ts, format.ts (tiền tệ vi-VN),
 ```
 
 - Token màu/spacing/radius khai báo trong `app/globals.css` (`:root` + `@theme`), component chỉ dùng class token (`bg-accent`, `text-muted`, `rounded-card`).
-- Auth: JWT lưu localStorage (`gear_token`) như bản cũ; giỏ khách `gear_guest_cart` được đẩy lên server khi đăng nhập.
+- Auth: JWT lưu trong cookie httpOnly `gear_token` (setting ở `lib/server-auth.ts`); client gọi backend qua
+  `/api/proxy/[...path]`, không cầm token. Giỏ khách `gear_guest_cart` (localStorage) được đẩy lên server khi đăng nhập.
 - ML là enhancement: khối featured/similar tự ẩn khi không có dữ liệu, trang vẫn đầy đủ.

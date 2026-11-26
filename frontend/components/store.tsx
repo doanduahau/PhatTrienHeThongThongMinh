@@ -84,7 +84,7 @@ type StoreValue = {
   subtotal: number;
   toast: (message: string) => void;
   login: (session: { user: User }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<boolean>;
   addToCart: (product: Product, quantity?: number) => Promise<void>;
   refreshCart: () => Promise<void>;
   stepQuantity: (productId: number, delta: number) => Promise<void>;
@@ -182,13 +182,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCartLoading(false);
   }, []);
 
-  const logout = useCallback(() => {
-    void api.logout();
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      toast("Đăng xuất thất bại. Vui lòng thử lại.");
+      return false;
+    }
     setUser(null);
     setServerCart(null);
     setCartCount(0);
     setGuestItems(readGuestCart());
-  }, []);
+    return true;
+  }, [toast]);
 
   const addToCart = useCallback(
     async (product: Product, quantity = 1) => {

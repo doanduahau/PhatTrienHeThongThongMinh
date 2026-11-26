@@ -6,9 +6,10 @@ import { endOfDayInAppTz, formatDate, formatIsoDate, formatMonthYear, startOfDay
 import { toNumber } from "../utils/money.js";
 
 export const getOverview = async () => {
-  const [totalUsers, totalProducts, byStatus, delivered, awaitingPayment] = await prisma.$transaction([
+  const [totalUsers, totalProducts, totalReviews, byStatus, delivered, awaitingPayment] = await prisma.$transaction([
     prisma.user.count(),
     prisma.product.count(),
+    prisma.review.count(),
     prisma.order.groupBy({ by: ["status"], _count: true }),
     prisma.order.aggregate({
       where: { status: ORDER_STATUS.DELIVERED },
@@ -25,6 +26,7 @@ export const getOverview = async () => {
   return {
     totalUsers,
     totalProducts,
+    totalReviews,
     ordersByStatus,
     deliveredOrders: delivered._count,
     revenue: toNumber(delivered._sum.totalAmount),

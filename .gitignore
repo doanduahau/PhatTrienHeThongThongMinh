@@ -16,6 +16,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.joblib.tmp
+backend/ml-service/data/uploads/
 
 # Environments
 .env

@@ -91,7 +91,8 @@ export function HeroSlideshow({ products }: { products: Product[] }) {
       onFocusCapture={stop}
       onBlurCapture={start}
     >
-      <div className="relative h-[calc(100svh-19rem)] min-h-[26rem] max-h-[46rem] w-full">
+      {/* Bù 108px của header cố định để mép dưới khớp với banner trang danh mục. */}
+      <div className="relative h-[calc(clamp(26rem,100svh_-_19rem,46rem)_+_108px)] w-full">
         {/* Lớp ảnh: crossfade giữa các slide */}
         {slides.map((product, index) => {
           const image = resolveImage(product.imageUrl);
@@ -108,6 +109,7 @@ export function HeroSlideshow({ products }: { products: Product[] }) {
                   fill
                   sizes="100vw"
                   priority={index === 0}
+                  unoptimized={image.startsWith("http:")}
                   className="object-cover brightness-[.78]"
                 />
               ) : (

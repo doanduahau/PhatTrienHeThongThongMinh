@@ -23,6 +23,8 @@ export type Product = {
   category?: { id: number; name: string; slug: string };
   brand?: { id: number; name: string };
   isInStock?: boolean;
+  /** false = ngừng bán: ẩn khỏi storefront/ML, admin vẫn thấy và sửa được. */
+  isActive?: boolean;
   detail?: Record<string, unknown> | null;
   rank?: number;
   score?: number;
@@ -61,6 +63,7 @@ export type SmartSearchResult = ProductList & {
 export type User = {
   id: number;
   username: string;
+  fullName?: string | null;
   email?: string;
   address?: string | null;
   role?: string;
@@ -105,6 +108,7 @@ export type OrderItem = {
 
 export type Order = {
   id: number;
+  code?: string;
   status: "pending" | "confirmed" | "shipping" | "delivered" | "cancelled";
   createdAt: string;
   totalAmount: number;
@@ -115,3 +119,130 @@ export type Order = {
 };
 
 export type OrderList = { items: Order[]; pagination: Pagination };
+
+/* ------------------------------- Trang quản trị ------------------------------- */
+
+/** Đơn phía admin: thêm mã DH-, danh tính khách và trạng thái thanh toán. */
+export type AdminOrder = {
+  id: number;
+  code: string;
+  userId: number;
+  status: Order["status"];
+  paymentMethod?: string;
+  paymentStatus?: string;
+  totalAmount: number;
+  shippingAddress: string;
+  shippingPhone?: string;
+  shippingMethodId?: string;
+  shippingMethod?: ShippingMethod | null;
+  createdAt: string;
+  user?: { id: number; username: string; email: string } | null;
+  items: OrderItem[];
+};
+
+export type AdminOrderList = { items: AdminOrder[]; pagination: Pagination };
+
+export type AdminCustomer = {
+  id: number;
+  username: string;
+  email: string;
+  address: string | null;
+  role: string;
+  emailVerified: boolean;
+  isLocked: boolean;
+  createdAt: string;
+  _count?: { orders: number };
+};
+
+export type AdminCustomerList = {
+  items: AdminCustomer[];
+  pagination: Pagination;
+};
+
+export type AdminReview = {
+  id: string;
+  content: string;
+  createdAt: string;
+  /** Điểm trung bình của sản phẩm tại lúc xem — nhận xét không lưu score riêng. */
+  score: number | null;
+  user: { id: number; username: string };
+  product: { id: number; name: string; imageUrl: string | null; isActive: boolean };
+};
+
+export type AdminReviewList = { items: AdminReview[]; pagination: Pagination };
+
+export type StatsOverview = {
+  totalUsers: number;
+  totalProducts: number;
+  totalReviews?: number;
+  ordersByStatus: Record<string, number>;
+  deliveredOrders: number;
+  revenue: number;
+  awaitingPayment: number;
+};
+
+export type RevenuePoint = {
+  period: string;
+  periodLabel: string;
+  orderCount: number;
+  revenue: number;
+};
+
+export type TopProduct = {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  soldQuantity: number;
+  revenue: number;
+};
+
+export type LowStockItem = {
+  id: number;
+  name: string;
+  stockQuantity: number;
+  price: number;
+  brand: { id: number; name: string } | null;
+};
+
+export type MlStatus = {
+  online: boolean;
+  serviceUrl: string;
+  detail: { status?: string; service?: string; version?: string } | null;
+};
+
+export type MlModel = {
+  key: string;
+  label: string;
+  path: string;
+  exists: boolean;
+  loaded: boolean;
+  loaded_at?: string | null;
+  modified_at?: string | null;
+  size_bytes?: number | null;
+  manifest?: {
+    version?: string;
+    trained_at?: string;
+    metrics?: Record<string, unknown>;
+  } | null;
+  error?: string | null;
+};
+
+export type MlDataset = {
+  name: string;
+  scope: "original" | "uploaded";
+  size_bytes: number;
+  modified_at: string;
+};
+
+/** Body của POST/PUT /api/products — bỏ trống trường nào thì giữ nguyên trường đó khi sửa. */
+export type ProductInput = {
+  categoryId?: number;
+  brandId?: number;
+  name?: string;
+  color?: string;
+  stockQuantity?: number;
+  price?: number;
+  imageUrl?: string;
+  isActive?: boolean;
+  detail?: Record<string, unknown> | null;
+};

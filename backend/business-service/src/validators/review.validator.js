@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DB_ID_MAX, PAGINATION, REVIEW_CONTENT_MAX } from "../utils/constants.js";
+import { dateRangeFields, validateDateRange } from "./dateRange.js";
 
 export { productIdParamSchema } from "./product.validator.js";
 
@@ -37,3 +38,32 @@ export const adminRemoveReviewParamsSchema = z.object({
     .max(20, "reviewId tối đa 20 ký tự!")
     .regex(/^NX-\d{4}$/, "reviewId không hợp lệ!"),
 });
+
+/**
+ * Bộ lọc cho GET /api/admin/reviews. Không có `score` vì điểm sao nằm ở bảng ratings
+ * theo cặp (userId, productId), reviews không lưu score; điểm vẫn trả về trong từng item.
+ */
+export const adminReviewsQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1, "page phải >= 1!")
+    .max(PAGINATION.MAX_PAGE, `page tối đa ${PAGINATION.MAX_PAGE}!`)
+    .default(PAGINATION.DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, "limit phải >= 1!")
+    .max(PAGINATION.MAX_LIMIT, `limit tối đa ${PAGINATION.MAX_LIMIT}!`)
+    .default(PAGINATION.DEFAULT_LIMIT),
+  productId: z.coerce.number().int().positive().max(DB_ID_MAX, "productId không hợp lệ!").optional(),
+  userId: z.coerce.number().int().positive().max(DB_ID_MAX, "userId không hợp lệ!").optional(),
+  // Match nội dung nhận xét, tên đăng nhập khách, tên sản phẩm. Chuỗi rỗng = không lọc.
+  search: z
+    .string()
+    .trim()
+    .max(100, "search tối đa 100 ký tự!")
+    .optional()
+    .transform((value) => value || undefined),
+  ...dateRangeFields,
+}).superRefine(validateDateRange);

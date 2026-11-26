@@ -8,6 +8,10 @@ import {
   productIdParamSchema,
 } from "../validators/product.validator.js";
 
+// Khách luôn bị chặn ở hàng đang bán; chỉ token admin mới được đổi visibility.
+const QUERY_ACTIVE_FILTER = { all: "any", true: true, false: false };
+const isAdmin = (req) => req.user?.role === "admin";
+
 export const getAll = async (req, res) => {
   const validation = validateInput(productQuerySchema, req.query);
   if (!validation.success) {
@@ -15,7 +19,10 @@ export const getAll = async (req, res) => {
   }
 
   try {
-    const data = await productService.getAll(validation.data);
+    const data = await productService.getAll({
+      ...validation.data,
+      isActive: isAdmin(req) ? (QUERY_ACTIVE_FILTER[validation.data.isActive] ?? "any") : true,
+    });
     return sendSuccess(res, data, "Lấy danh sách sản phẩm thành công!");
   } catch (error) {
     return sendAppError(res, error, "Lấy danh sách sản phẩm thất bại!");
@@ -29,7 +36,7 @@ export const getById = async (req, res) => {
   }
 
   try {
-    const data = await productService.getById(params.data.id);
+    const data = await productService.getById(params.data.id, { includeInactive: isAdmin(req) });
     return sendSuccess(res, data, "Lấy chi tiết sản phẩm thành công!");
   } catch (error) {
     return sendAppError(res, error, "Lấy chi tiết sản phẩm thất bại!");

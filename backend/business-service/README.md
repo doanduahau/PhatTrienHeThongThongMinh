@@ -152,8 +152,14 @@ backend tự fallback bằng Prisma và trả `data.source = "fallback"`; API v�
 | GET | `/api/products/search/smart` | — | `?q&page&limit` — ML parse intent/ràng buộc, backend tự query |
 | GET | `/api/products/:id/similar` | — | `?limit` — sản phẩm tương tự (Cosine) |
 | GET | `/api/recommendations/featured` | — | `?categoryId&limit` — sản phẩm nổi bật |
-| GET | `/api/recommendations/for-you` | Đăng nhập | `?limit` — gợi ý cá nhân hóa, cold-start trả featured |
+| GET | `/api/recommendations/for-you` | Đăng nhập | `?limit&slug` — Xếp hạng theo tài khoản trong danh mục. Có thể truyền nhiều slug cách nhau bằng dấu phẩy. Cold-start dùng đánh giá chung trong cùng phạm vi |
 | GET | `/api/recommendations/ml-status` | Admin | Health + URL ML service |
+| GET | `/api/admin/ml/models` | Admin | Danh sách model, trạng thái nạp và manifest |
+| POST | `/api/admin/ml/reload` | Admin | Nạp lại tất cả model hoặc chỉ model theo `?key` |
+| GET | `/api/admin/ml/datasets` | Admin | Liệt kê CSV có sẵn và CSV đã tải lên |
+| GET | `/api/admin/ml/datasets/:scope/:name` | Admin | Tải CSV với `scope` là `original` hoặc `uploaded` |
+| PUT | `/api/admin/ml/datasets/uploaded/:name` | Admin | Tải CSV UTF-8 tối đa 10 MB. Body dùng `application/octet-stream` |
+| DELETE | `/api/admin/ml/datasets/uploaded/:name` | Admin | Xóa CSV đã tải lên |
 
 ### Giỏ hàng (đăng nhập)
 

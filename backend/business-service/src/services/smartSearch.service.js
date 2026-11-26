@@ -222,15 +222,18 @@ export const smartSearch = async (query, { page = 1, limit = 20 } = {}) => {
     return { query, source, analysis, items: [], pagination: emptyPage(page, limit) };
   }
 
-  const where =
-    source === "fallback"
+  // is_active: hàng đã ngưng bán không xuất hiện ở mọi luồng tìm kiếm.
+  const where = {
+    ...(source === "fallback"
       ? {
           OR: [
             { name: containsInsensitive(query) },
             { brand: { name: containsInsensitive(query) } },
           ],
         }
-      : buildSmartSearchWhere(analysis.hardConstraints, analysis.softTags, query);
+      : buildSmartSearchWhere(analysis.hardConstraints, analysis.softTags, query)),
+    isActive: true,
+  };
 
   const [items, total] = await prisma.$transaction([
     prisma.product.findMany({

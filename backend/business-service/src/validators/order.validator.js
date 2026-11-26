@@ -60,6 +60,13 @@ export const adminOrdersQuerySchema = z.object({
   ...pageFields,
   status: z.enum(ORDER_STATUS_VALUES).optional(),
   userId: z.coerce.number().int().positive().max(DB_ID_MAX, "userId không hợp lệ!").optional(),
+  // Match mã đơn DH-, tên/Email khách, số điện thoại nhận hàng. Chuỗi rỗng = không lọc.
+  search: z
+    .string()
+    .trim()
+    .max(100, "search tối đa 100 ký tự!")
+    .optional()
+    .transform((value) => value || undefined),
   ...dateRangeFields,
 }).superRefine(validateDateRange);
 

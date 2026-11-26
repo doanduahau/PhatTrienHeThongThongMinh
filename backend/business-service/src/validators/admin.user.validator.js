@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DB_ID_MAX, PAGINATION, ROLES } from "../utils/constants.js";
+import { email, password, username } from "./auth.validator.js";
 
 export const adminUsersQuerySchema = z.object({
   page: z.coerce
@@ -41,4 +42,18 @@ export const setUserRoleSchema = z.object({
   role: z.enum(Object.values(ROLES), {
     errorMap: () => ({ message: `role chỉ nhận: ${Object.values(ROLES).join(", ")}` }),
   }),
+});
+
+/** Tài khoản do admin tạo: cùng chuẩn đăng ký, thêm role và dấu đã xác minh email. */
+export const createAdminUserSchema = z.object({
+  username,
+  email,
+  password,
+  address: z.string().trim().max(255, "Địa chỉ tối đa 255 ký tự!").optional(),
+  role: z.enum(Object.values(ROLES)).default(ROLES.CUSTOMER),
+  emailVerified: z.boolean().default(false),
+});
+
+export const adminResetPasswordSchema = z.object({
+  password,
 });

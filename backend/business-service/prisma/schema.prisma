@@ -11,6 +11,7 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique @db.VarChar(50)
+  fullName  String?  @map("full_name") @db.VarChar(100)
   password  String   @db.VarChar(255)
   email     String   @unique @db.VarChar(100)
   address   String?  @db.Text
@@ -106,6 +107,8 @@ model ShippingMethod {
 
 model Order {
   id               Int      @id @default(autoincrement())
+  /// Mã đơn hiển thị cho người bán/người mua (DH-0001), sinh từ orders_code_seq như DG/NX/VC
+  code             String   @unique @default(dbgenerated("'DH-' || lpad(nextval('orders_code_seq')::text, 4, '0')")) @db.VarChar(20)
   userId           Int      @map("user_id")
   shippingMethodId String   @map("shipping_method_id") @db.VarChar(20)
   totalAmount      Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
@@ -173,6 +176,8 @@ model Product {
   price         Decimal  @default(0) @db.Decimal(15, 2)
   rating        Decimal  @default(0) @db.Decimal(3, 2)
   ratingCount   Int      @default(0) @map("rating_count")
+  /// false = ẩn khỏi storefront, ML và tìm kiếm; admin vẫn xem và sửa được
+  isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
 
   category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)

@@ -140,10 +140,10 @@ const DEFAULT_HERO = {
 
 export function CategoryBanner({
   category,
-  featuredProduct,
+  recommendation,
 }: {
   category?: Pick<Category, "slug" | "name"> | null;
-  featuredProduct?: Product | null;
+  recommendation: { product: Product; title: string } | null;
 }) {
   const info = (category?.slug ? CATEGORY_HERO_INFO[category.slug] : null) ?? {
     ...DEFAULT_HERO,
@@ -153,7 +153,7 @@ export function CategoryBanner({
       : DEFAULT_HERO.headline,
   };
 
-  const imageSrc = resolveImage(featuredProduct?.imageUrl);
+  const imageSrc = resolveImage(recommendation?.product.imageUrl);
 
   return (
     <section className="relative w-full overflow-hidden bg-[#0b101b] text-white">
@@ -166,6 +166,7 @@ export function CategoryBanner({
             fill
             priority
             sizes="100vw"
+            unoptimized={imageSrc.startsWith("http:")}
             className="object-cover object-center opacity-60 md:opacity-80"
           />
           <div
@@ -199,20 +200,20 @@ export function CategoryBanner({
           ) : null}
         </div>
 
-        {/* Sản phẩm nổi bật card ở góc dưới bên phải */}
-        {featuredProduct ? (
+        {recommendation ? (
           <div className="shrink-0">
             <Link
-              href={`/san-pham/${featuredProduct.id}`}
+              href={`/san-pham/${recommendation.product.id}`}
               className="group flex items-center gap-3.5 rounded-xl border border-white/15 bg-[#121927]/90 p-3 shadow-2xl backdrop-blur-md transition-all hover:border-white/30 hover:bg-[#1a2438]"
             >
               <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-white/10">
                 {imageSrc ? (
                   <Image
                     src={imageSrc}
-                    alt={featuredProduct.name}
+                    alt=""
                     fill
                     sizes="48px"
+                    unoptimized={imageSrc.startsWith("http:")}
                     className="object-cover"
                   />
                 ) : (
@@ -223,13 +224,13 @@ export function CategoryBanner({
               </div>
               <div className="min-w-0 pr-2">
                 <span className="block text-[10px] font-semibold uppercase tracking-wider text-white/60">
-                  Sản phẩm nổi bật
+                  {recommendation.title}
                 </span>
                 <span className="block max-w-[200px] truncate text-sm font-medium text-white sm:max-w-[260px]">
-                  {featuredProduct.name}
+                  {recommendation.product.name}
                 </span>
                 <span className="block text-xs font-semibold text-white/60">
-                  {money(featuredProduct.price)}
+                  {money(recommendation.product.price)}
                 </span>
               </div>
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover:bg-accent group-hover:text-accent-text">

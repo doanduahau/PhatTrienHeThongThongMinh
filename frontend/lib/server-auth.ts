@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-/** Business service URL (server-side proxy gọi tới đây). */
-export const BE_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+/** Business service URL (server-side proxy gọi tới đây). 5001 vì macOS chiếm 5000 cho AirPlay. */
+export const BE_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 export const COOKIE_NAME = "gear_token";
 
 export const cookieOptions = {
